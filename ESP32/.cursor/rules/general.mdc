@@ -1,0 +1,71 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# ArduinoJson 使用规则
+
+## 1. JsonDocument 使用规则
+- 使用 `JsonDocument` 替代已弃用的 `DynamicJsonDocument`
+- 不需要指定文档大小，`JsonDocument` 会自动处理内存分配
+- 示例：
+```cpp
+JsonDocument doc;
+DeserializationError error = deserializeJson(doc, jsonParams);
+```
+
+## 2. JSON 键值检查规则
+- 使用 `is<T>()` 方法替代已弃用的 `containsKey()` 方法
+- 这种方式同时检查键是否存在和值类型是否正确
+- 示例：
+```cpp
+if (doc["key"].is<uint8_t>()) {
+    uint8_t value = doc["key"].as<uint8_t>();
+}
+
+```
+
+# NeoPixelBus 使用规则
+HsbColor represents a color object that is represented by Hue, Saturation, Brightness component values.  The primary use of this class is for easy definitions of color. The [Wikipedia article](https://en.wikipedia.org/wiki/HSL_and_HSV) on this colorspace uses the term "Value" instead of "Brightness".  
+
+**NOTE:** HsbColor has no concept of RGB or W channels.  It can be converted to RGB, but when converted to RGBW, RGBWW, and RGBWWW the W channels will always be empty.
+
+![Visual representation of HSV color space](https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/HSV_color_solid_cylinder_saturation_gray.png/320px-HSV_color_solid_cylinder_saturation_gray.png)
+
+
+## Properties
+There are three properties that represent the component values Hue, Saturation, and Brightness.  The values range from 0.0f to 1.0f.  
+H is the primary color component and represents a color wheel.  Often you will see examples of this being between 0 and 360, but this library it is between 0.0f and 1.0f inclusive.
+
+```
+float H;
+float S;
+float B;
+```
+## Constructors
+
+### HsbColor(float h, float s, float b) :
+Constructs a HsbColor using Hue, Saturation, and Brightness color component values.
+> * _h_ - value for Hue component (0.0f - 1.0f).
+> * _s_ - value for Saturation component (0.0f - 1.0f). 
+> * _b_ - value for Brightness (0.0f - 1.0f).
+
+### HsbColor(RgbColor color);
+Construct a HsbColor using RgbColor, converting the Rgb to Hsb
+> * _color_ - a RgbColor object.
+
+### HsbColor()
+Construct a HsbColor that will have its values set in latter operations.  
+CAUTION:  The H,S,B members are not initialized and may not be consistent until set.
+
+## Methods
+### template \<typename T_NEOHUEBLEND\> static HsbColor LinearBlend(HsbColor left, HsbColor right, float progress)
+This will blend between two colors by the amount defined by the progress variable.  
+T_NEOHUEBLEND - [a NeoHueBlend object](https://github.com/Makuna/NeoPixelBus/wiki/NeoHueBlend-objects), that will define how the colors are blended.  
+> * _left_ - the color to start the blend at.  
+> * _right_ - the color to end the blend at.  
+> * _progress_ - (0.0f - 1.0f) value where 0.0f will return left and 1.0f will return right and a value between will blend the color weighted linearly between them.  
+This is a static function, which means you need to call it scoped to the object class and not an instance like...
+```
+    HsbColor results = HsbColor::LinearBlend<NeoHueBlendShortestDistance>(HsbColor(0.88f,1.0f,1.0f), HsbColor(0.12f,1.0f,1.0f), 0.33f);
+```

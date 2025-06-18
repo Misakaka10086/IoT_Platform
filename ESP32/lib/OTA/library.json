@@ -1,0 +1,13 @@
+{
+    "name": "OTA",
+    "version": "1.0.0",
+    "description": "A simple library to perform OTA updates on ESP32 from a given URL.",
+    "keywords": "ota, esp32, update",
+    "authors": [
+      {
+        "name": "Misaka"
+      }
+    ],
+    "frameworks": "arduino",
+    "platforms": "espressif32"
+  }
