@@ -1,6 +1,7 @@
 // lib/OTA/src/OTA.cpp (Enhanced with Rollback Support)
 
 #include "OTA.h"
+#include "certificate.h"
 #include <HTTPClient.h>
 #include <Update.h>
 #include <WiFi.h>
@@ -469,7 +470,7 @@ void OTA::_parseOtaCommand(const char *payload) {
 
     // Start OTA update with SHA256 verification if provided
     Serial.println("[OTA] Starting OTA update...");
-    updateFromURL(firmwareUrl, nullptr, sha256);
+    updateFromURL(firmwareUrl, root_ca, sha256);
   } else {
     Serial.println("[OTA] Invalid or missing OTA parameters in MQTT message");
     Serial.println("[OTA] Expected format: {\"OTA\": {\"firmwareUrl\": "

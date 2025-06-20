@@ -14,3 +14,4 @@ include/secrets.h
 *.ico
 *.webp
 *.py
+python/*
