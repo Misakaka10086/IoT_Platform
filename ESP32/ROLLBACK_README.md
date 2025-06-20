@@ -32,6 +32,12 @@
 - 支持可选的SHA256验证
 - 完整的错误处理和日志输出
 
+### 6. SHA256固件校验
+- 实时计算下载固件的SHA256哈希值
+- 支持多种十六进制格式输入
+- 详细的校验失败报告
+- 防止固件篡改和传输错误
+
 ## 使用方法
 
 ### 1. 基本设置
@@ -81,10 +87,52 @@ OTA命令通过MQTT消息发送，使用JSON格式：
 - `SHA256` (可选): 固件的SHA256哈希值，用于验证
 
 **示例命令：**
+
+#### 基本OTA更新（无校验）：
 ```json
 {
   "OTA": {
     "firmwareUrl": "https://github.com/user/repo/releases/download/v1.0.0/firmware.bin"
+  }
+}
+```
+
+#### 带SHA256校验的OTA更新：
+```json
+{
+  "OTA": {
+    "firmwareUrl": "https://github.com/user/repo/releases/download/v1.0.0/firmware.bin",
+    "SHA256": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+  }
+}
+```
+
+#### 支持多种SHA256格式：
+```json
+{
+  "OTA": {
+    "firmwareUrl": "https://example.com/firmware.bin",
+    "SHA256": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+  }
+}
+```
+
+或者带空格：
+```json
+{
+  "OTA": {
+    "firmwareUrl": "https://example.com/firmware.bin",
+    "SHA256": "a1 b2 c3 d4 e5 f6 g7 h8 i9 j0 k1 l2 m3 n4 o5 p6 q7 r8 s9 t0 u1 v2 w3 x4 y5 z6"
+  }
+}
+```
+
+或者带冒号：
+```json
+{
+  "OTA": {
+    "firmwareUrl": "https://example.com/firmware.bin",
+    "SHA256": "a1:b2:c3:d4:e5:f6:g7:h8:i9:j0:k1:l2:m3:n4:o5:p6:q7:r8:s9:t0:u1:v2:w3:x4:y5:z6"
   }
 }
 ```
@@ -208,6 +256,38 @@ void onOtaSuccess(const char *msg) {
 - 支持Arduino IDE串口监视器
 
 ### 日志示例
+
+#### 基本OTA更新：
+```
+[OTA] Received MQTT command: {"OTA":{"firmwareUrl":"http://..."}}
+[OTA] Received firmware URL: http://example.com/firmware.bin (no SHA256 provided)
+[OTA] Starting OTA update...
+[OTA] Update successful! Rebooting...
+```
+
+#### 带SHA256校验的OTA更新：
+```
+[OTA] Received MQTT command: {"OTA":{"firmwareUrl":"http://...","SHA256":"a1b2c3d4..."}}
+[OTA] Received firmware URL: http://example.com/firmware.bin
+[OTA] Received SHA256: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6
+[OTA] Starting OTA update...
+[OTA] SHA256 verification enabled
+[OTA] Verifying SHA256 hash...
+[OTA] SHA256 verification passed
+[OTA] Update successful! Rebooting...
+```
+
+#### SHA256校验失败：
+```
+[OTA] SHA256 verification enabled
+[OTA] Verifying SHA256 hash...
+[OTA] SHA256 verification failed!
+[OTA] Expected: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6
+[OTA] Calculated: f1f2f3f4f5f6f7f8f9f0f1f2f3f4f5f6f7f8f9f0f1f2f3f4f5f6f7f8f9f0
+OTA Error: -5, SHA256 verification failed
+```
+
+#### 回滚验证：
 ```
 [OTA] First boot after OTA update, starting validation...
 [OTA] Performing custom validation...

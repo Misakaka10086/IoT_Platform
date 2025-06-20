@@ -6,6 +6,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <esp_ota_ops.h>
+#include <mbedtls/sha256.h>
 
 extern "C" bool verifyRollbackLater() {
   // 返回 true，告诉 Arduino
@@ -127,6 +128,7 @@ void OTA::_updateTask(void *pvParameters) {
   OTATaskParams *params = (OTATaskParams *)pvParameters;
   String url = params->url;
   String root_ca_str = params->root_ca;
+  String sha256_hash = params->sha256; // Extract SHA256 hash
 
   // Clean up the passed parameter structure to prevent memory leaks
   delete params;
@@ -187,6 +189,17 @@ void OTA::_updateTask(void *pvParameters) {
     return;
   }
 
+  // Initialize SHA256 context for verification
+  mbedtls_sha256_context sha256_ctx;
+  uint8_t calculated_hash[32];
+  bool sha256_verification_enabled = !sha256_hash.isEmpty();
+
+  if (sha256_verification_enabled) {
+    Serial.println("[OTA] SHA256 verification enabled");
+    mbedtls_sha256_init(&sha256_ctx);
+    mbedtls_sha256_starts(&sha256_ctx, 0); // 0 = SHA256, 1 = SHA224
+  }
+
   size_t written = 0;
   static uint8_t buff[4096] = {0};
   Stream &stream = http.getStream();
@@ -199,6 +212,12 @@ void OTA::_updateTask(void *pvParameters) {
         Update.abort();
         break;
       }
+
+      // Update SHA256 hash if verification is enabled
+      if (sha256_verification_enabled) {
+        mbedtls_sha256_update(&sha256_ctx, buff, len);
+      }
+
       written += len;
       if (_progressCallback && (written % 1024 == 0)) // 每100KB报告一次
         _progressCallback(written, contentLength);
@@ -215,6 +234,41 @@ void OTA::_updateTask(void *pvParameters) {
     Update.abort();
     vTaskDelete(NULL);
     return;
+  }
+
+  // Complete SHA256 calculation if verification is enabled
+  if (sha256_verification_enabled) {
+    mbedtls_sha256_finish(&sha256_ctx, calculated_hash);
+    mbedtls_sha256_free(&sha256_ctx);
+
+    Serial.println("[OTA] Verifying SHA256 hash...");
+
+    // Convert expected hash string to bytes
+    uint8_t expected_hash[32];
+    _hexStringToBytes(sha256_hash, expected_hash, 32);
+
+    // Compare hashes
+    if (memcmp(calculated_hash, expected_hash, 32) != 0) {
+      Serial.println("[OTA] SHA256 verification failed!");
+      Serial.print("[OTA] Expected: ");
+      for (int i = 0; i < 32; i++) {
+        Serial.printf("%02x", expected_hash[i]);
+      }
+      Serial.println();
+      Serial.print("[OTA] Calculated: ");
+      for (int i = 0; i < 32; i++) {
+        Serial.printf("%02x", calculated_hash[i]);
+      }
+      Serial.println();
+
+      if (_errorCallback)
+        _errorCallback(-5, "SHA256 verification failed");
+      Update.abort();
+      vTaskDelete(NULL);
+      return;
+    }
+
+    Serial.println("[OTA] SHA256 verification passed");
   }
 
   if (!Update.end(true)) {
@@ -243,13 +297,17 @@ void OTA::_updateTaskTrampoline(void *pvParameters) {
 }
 
 // This is the new public function that only starts the task
-void OTA::updateFromURL(const String &url, const char *root_ca) {
+void OTA::updateFromURL(const String &url, const char *root_ca,
+                        const char *sha256) {
   // Dynamically allocate parameter structure to pass to new task
   OTATaskParams *params = new OTATaskParams();
   params->instance = this;
   params->url = url;
   if (root_ca) {
     params->root_ca = root_ca;
+  }
+  if (sha256) {
+    params->sha256 = sha256;
   }
 
   // Create task
@@ -346,6 +404,31 @@ void OTA::printFirmwareInfo() {
   }
 }
 
+// Convert hex string to bytes
+void OTA::_hexStringToBytes(const String &hexString, uint8_t *bytes,
+                            size_t length) {
+  // Remove any spaces or colons from the hex string
+  String cleanHex = hexString;
+  cleanHex.replace(" ", "");
+  cleanHex.replace(":", "");
+  cleanHex.toLowerCase();
+
+  // Ensure the hex string is the correct length (2 characters per byte)
+  if (cleanHex.length() != length * 2) {
+    Serial.printf("[OTA] Invalid hex string length: %d (expected %d)\n",
+                  cleanHex.length(), length * 2);
+    // Fill with zeros if invalid
+    memset(bytes, 0, length);
+    return;
+  }
+
+  // Convert hex string to bytes
+  for (size_t i = 0; i < length; i++) {
+    String byteString = cleanHex.substring(i * 2, i * 2 + 2);
+    bytes[i] = (uint8_t)strtol(byteString.c_str(), NULL, 16);
+  }
+}
+
 // Static MQTT command handler - can be passed directly to
 // MqttController.Begin()
 void OTA::otaCommand(const char *payload) {
@@ -384,9 +467,9 @@ void OTA::_parseOtaCommand(const char *payload) {
                     firmwareUrl);
     }
 
-    // Start OTA update
+    // Start OTA update with SHA256 verification if provided
     Serial.println("[OTA] Starting OTA update...");
-    updateFromURL(firmwareUrl);
+    updateFromURL(firmwareUrl, nullptr, sha256);
   } else {
     Serial.println("[OTA] Invalid or missing OTA parameters in MQTT message");
     Serial.println("[OTA] Expected format: {\"OTA\": {\"firmwareUrl\": "

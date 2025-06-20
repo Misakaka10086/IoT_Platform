@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 #include <esp_ota_ops.h>
 #include <functional>
+#include <mbedtls/sha256.h>
 
 using OTAProgressCallback = std::function<void(unsigned int, unsigned int)>;
 using OTAErrorCallback = std::function<void(int, const char *)>;
@@ -20,6 +21,7 @@ struct OTATaskParams {
   OTA *instance;
   String url;
   String root_ca;
+  String sha256; // SHA256 hash for verification
 };
 
 class OTA {
@@ -33,7 +35,10 @@ public:
   void onValidation(OTAValidationCallback callback);
 
   // Public function to start OTA update in background task
-  void updateFromURL(const String &url, const char *root_ca = nullptr);
+  // sha256 parameter is optional - if provided, will verify the downloaded
+  // firmware
+  void updateFromURL(const String &url, const char *root_ca = nullptr,
+                     const char *sha256 = nullptr);
 
   void printFirmwareInfo();
 
@@ -63,6 +68,14 @@ private:
 
   // MQTT command parsing function
   void _parseOtaCommand(const char *payload);
+
+  // SHA256 verification function
+  bool _verifySHA256(const uint8_t *data, size_t length,
+                     const String &expectedHash);
+
+  // Convert hex string to bytes
+  void _hexStringToBytes(const String &hexString, uint8_t *bytes,
+                         size_t length);
 
   // Callback functions
   OTAProgressCallback _progressCallback;
