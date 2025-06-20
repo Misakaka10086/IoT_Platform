@@ -13,7 +13,13 @@ extern "C" bool verifyRollbackLater() {
   return true;
 }
 
-OTA::OTA() : _rollbackEnabled(true), _validationPerformed(false) {}
+// Static instance pointer for command handling
+OTA *OTA::_instance = nullptr;
+
+OTA::OTA() : _rollbackEnabled(true), _validationPerformed(false) {
+  // Set the static instance pointer to this instance
+  _instance = this;
+}
 
 void OTA::onProgress(OTAProgressCallback callback) {
   _progressCallback = callback;
@@ -337,5 +343,53 @@ void OTA::printFirmwareInfo() {
     Serial.println("=====================================");
   } else {
     Serial.println("ERROR: Failed to get firmware information");
+  }
+}
+
+// Static MQTT command handler - can be passed directly to
+// MqttController.Begin()
+void OTA::otaCommand(const char *payload) {
+  if (_instance == nullptr) {
+    Serial.println(
+        "[OTA] Error: No OTA instance available for command handling");
+    return;
+  }
+
+  Serial.printf("[OTA] Received MQTT command: %s\n", payload);
+  _instance->_parseOtaCommand(payload);
+}
+
+// MQTT command parsing function
+void OTA::_parseOtaCommand(const char *payload) {
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, payload);
+
+  if (error) {
+    Serial.printf("[OTA] JSON parsing failed: %s\n", error.c_str());
+    return;
+  }
+
+  // Check if OTA parameters exist
+  if (doc["OTA"]["firmwareUrl"].is<const char *>()) {
+    const char *firmwareUrl = doc["OTA"]["firmwareUrl"];
+    const char *sha256 = nullptr;
+
+    // SHA256 is optional
+    if (doc["OTA"]["SHA256"].is<const char *>()) {
+      sha256 = doc["OTA"]["SHA256"];
+      Serial.printf("[OTA] Received firmware URL: %s\n", firmwareUrl);
+      Serial.printf("[OTA] Received SHA256: %s\n", sha256);
+    } else {
+      Serial.printf("[OTA] Received firmware URL: %s (no SHA256 provided)\n",
+                    firmwareUrl);
+    }
+
+    // Start OTA update
+    Serial.println("[OTA] Starting OTA update...");
+    updateFromURL(firmwareUrl);
+  } else {
+    Serial.println("[OTA] Invalid or missing OTA parameters in MQTT message");
+    Serial.println("[OTA] Expected format: {\"OTA\": {\"firmwareUrl\": "
+                   "\"http://...\", \"SHA256\": \"...\"}}");
   }
 }

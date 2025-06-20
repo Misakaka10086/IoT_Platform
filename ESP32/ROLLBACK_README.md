@@ -26,6 +26,12 @@
 - 便于调试和监控
 - 支持Arduino IDE的串口监视器
 
+### 5. 内置MQTT命令接口
+- 提供 `OTA::otaCommand` 静态函数作为MQTT消息处理接口
+- 自动解析JSON格式的OTA命令
+- 支持可选的SHA256验证
+- 完整的错误处理和日志输出
+
 ## 使用方法
 
 ### 1. 基本设置
@@ -40,8 +46,8 @@ OTA myOta;
 void setup() {
   Serial.begin(115200); // 初始化串口
   
-  // 初始化MQTT控制器
-  mqttController.Begin(onMqttMessage);
+  // 使用OTA内置命令接口初始化MQTT控制器
+  mqttController.Begin(OTA::otaCommand);
   
   // 设置OTA回调
   myOta.onProgress(onOtaProgress);
@@ -57,7 +63,33 @@ void setup() {
 }
 ```
 
-### 2. 自定义验证函数
+### 2. MQTT命令格式
+
+OTA命令通过MQTT消息发送，使用JSON格式：
+
+```json
+{
+  "OTA": {
+    "firmwareUrl": "http://example.com/firmware.bin",
+    "SHA256": "optional_sha256_hash"
+  }
+}
+```
+
+**参数说明：**
+- `firmwareUrl` (必需): 固件下载URL，支持HTTP和HTTPS
+- `SHA256` (可选): 固件的SHA256哈希值，用于验证
+
+**示例命令：**
+```json
+{
+  "OTA": {
+    "firmwareUrl": "https://github.com/user/repo/releases/download/v1.0.0/firmware.bin"
+  }
+}
+```
+
+### 3. 自定义验证函数
 
 ```cpp
 bool customValidation() {
@@ -106,7 +138,7 @@ bool customValidation() {
 }
 ```
 
-### 3. OTA升级流程
+### 4. OTA升级流程
 
 ```cpp
 // 当收到OTA升级命令时
@@ -165,22 +197,6 @@ void onOtaSuccess(const char *msg) {
 3. 引导加载程序选择之前的有效版本
 4. 启动回滚版本
 
-## 配置说明
-
-### 分区表配置
-项目使用自定义分区表 `partitions.csv`：
-- `factory`: 工厂固件分区
-- `ota_0`, `ota_1`: OTA应用分区
-- `otadata`: OTA数据分区
-
-### 编译配置
-在 `platformio.ini` 中启用回滚功能：
-```ini
-build_flags =
-    -D CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=1
-    -D CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK=0
-board_build.partitions = partitions.csv
-```
 
 ## 日志输出
 
@@ -243,11 +259,6 @@ board_build.partitions = partitions.csv
 3. 通过串口监控验证过程
 4. 查看Serial输出的详细日志
 
-## 安全考虑
-
-1. **防回滚攻击**：可启用 `CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK`
-2. **安全版本号**：在固件中设置安全版本号
-3. **签名验证**：使用签名验证固件完整性
 
 ## 示例代码
 

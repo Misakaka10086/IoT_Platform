@@ -3,6 +3,7 @@
 #define OTA_H
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <esp_ota_ops.h>
 #include <functional>
 
@@ -46,6 +47,10 @@ public:
   void enableRollbackProtection(bool enable = true);
   bool isRollbackProtectionEnabled() const { return _rollbackEnabled; }
 
+  // Static MQTT command handler - can be passed directly to
+  // MqttController.Begin()
+  static void otaCommand(const char *payload);
+
 private:
   // Actual update function running in separate task
   void _updateTask(void *pvParameters);
@@ -55,6 +60,9 @@ private:
 
   // Custom validation function
   bool _performCustomValidation();
+
+  // MQTT command parsing function
+  void _parseOtaCommand(const char *payload);
 
   // Callback functions
   OTAProgressCallback _progressCallback;
@@ -68,6 +76,9 @@ private:
 
   // Custom validation timeout (ms)
   static const unsigned long VALIDATION_TIMEOUT = 30000; // 30 seconds
+
+  // Static instance pointer for command handling
+  static OTA *_instance;
 };
 
 #endif // OTA_H

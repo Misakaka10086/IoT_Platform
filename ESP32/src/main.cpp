@@ -66,40 +66,15 @@ bool customValidation() {
   return true;
 }
 
-void onMqttMessage(const char *payload) {
-  JsonDocument doc;
-  deserializeJson(doc, payload);
-
-  // Check if OTA parameters exist
-  if (doc["OTA"]["firmwareUrl"].is<const char *>() &&
-      doc["OTA"]["SHA256"].is<const char *>()) {
-    const char *firmwareUrl = doc["OTA"]["firmwareUrl"];
-    const char *sha256 = doc["OTA"]["SHA256"];
-    Serial.printf("Received firmware URL: %s\n", firmwareUrl);
-    Serial.printf("Received SHA256: %s\n", sha256);
-    // Start OTA update
-    myOta.updateFromURL(firmwareUrl);
-  } else {
-    Serial.println("Invalid or missing OTA parameters in MQTT message");
-  }
-}
-
 void onOtaProgress(unsigned int progress, unsigned int total) {
   Serial.printf("OTA Progress: %u/%u\n", progress, total);
 }
 
 void onOtaError(int error, const char *errorString) {
   Serial.printf("OTA Error: %d, %s\n", error, errorString);
-
-  // Resume MQTT on OTA error
-  Serial.println("Resuming MQTT after OTA error...");
 }
 
-void onOtaSuccess(const char *msg) {
-  Serial.println("OTA Success");
-  // Note: MQTT will be resumed automatically after reboot
-  // since the device will restart and MQTT will reconnect normally
-}
+void onOtaSuccess(const char *msg) { Serial.println("OTA Success"); }
 
 void setup() {
   Serial.begin(115200);
@@ -108,8 +83,8 @@ void setup() {
   strip.Begin();
   strip.Show();
 
-  // Initialize MQTT controller
-  mqttController.Begin(onMqttMessage);
+  // Initialize MQTT controller with OTA command handler
+  mqttController.Begin(OTA::otaCommand);
 
   myOta.printFirmwareInfo();
   // Setup OTA with rollback protection
