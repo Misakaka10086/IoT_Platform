@@ -77,5 +77,3 @@ void MqttController::onMqttMessage(char *topic, char *payload,
 void MqttController::sendMessage(const char *topic, const char *payload) {
   _mqttClient.publish(topic, 0, true, payload);
 }
-
-

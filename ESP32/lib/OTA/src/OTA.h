@@ -1,17 +1,20 @@
-// lib/OTA/src/OTA.h (FreeRTOS Task Version)
+// lib/OTA/src/OTA.h (Enhanced with Rollback Support)
 #ifndef OTA_H
 #define OTA_H
 
 #include <Arduino.h>
+#include <esp_ota_ops.h>
 #include <functional>
 
 using OTAProgressCallback = std::function<void(unsigned int, unsigned int)>;
 using OTAErrorCallback = std::function<void(int, const char *)>;
 using OTASuccessCallback = std::function<void(const char *)>;
+// Custom validation callback
+using OTAValidationCallback = std::function<bool()>;
 
 class OTA;
 
-// 结构体，用于向新创建的 FreeRTOS 任务传递参数
+// Structure for passing parameters to FreeRTOS task
 struct OTATaskParams {
   OTA *instance;
   String url;
@@ -25,19 +28,46 @@ public:
   void onError(OTAErrorCallback callback);
   void onSuccess(OTASuccessCallback callback);
 
-  // 这个公共函数现在只负责创建后台任务，然后立即返回（非阻塞）
+  // Custom validation callback
+  void onValidation(OTAValidationCallback callback);
+
+  // Public function to start OTA update in background task
   void updateFromURL(const String &url, const char *root_ca = nullptr);
 
+  void printFirmwareInfo();
+
+  // Rollback management functions
+  void checkAndValidateApp();
+  void markAppValid();
+  void markAppInvalid();
+  bool isFirstBootAfterUpdate();
+
+  // Rollback state management
+  void enableRollbackProtection(bool enable = true);
+  bool isRollbackProtectionEnabled() const { return _rollbackEnabled; }
+
 private:
-  // 实际执行更新的函数，它将在一个独立的任务中运行
+  // Actual update function running in separate task
   void _updateTask(void *pvParameters);
 
-  // 让 C++ 成员函数可以被 FreeRTOS 的 C 风格 API 调用
+  // Trampoline function for FreeRTOS C-style API
   static void _updateTaskTrampoline(void *pvParameters);
 
+  // Custom validation function
+  bool _performCustomValidation();
+
+  // Callback functions
   OTAProgressCallback _progressCallback;
   OTAErrorCallback _errorCallback;
   OTASuccessCallback _successCallback;
+  OTAValidationCallback _validationCallback;
+
+  // Rollback configuration
+  bool _rollbackEnabled;
+  bool _validationPerformed;
+
+  // Custom validation timeout (ms)
+  static const unsigned long VALIDATION_TIMEOUT = 30000; // 30 seconds
 };
 
 #endif // OTA_H
