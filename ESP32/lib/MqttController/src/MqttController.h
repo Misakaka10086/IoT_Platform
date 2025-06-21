@@ -3,19 +3,19 @@
 
 #include "../../../include/DebugUtils.h"
 #include "../../../include/secrets.h" // 在头文件中包含，因为实现也在这里
+#include <ArduinoJson.h>
 #include <AsyncMqttClient.h>
 #include <WiFi.h>
 
 typedef void (*CommandCallback)(const char *commandPayload);
+typedef void (*MqttConnectCallback)(bool sessionPresent);
 
 class MqttController {
 public:
   MqttController();
 
   // ***** Begin 的实现现在直接放在头文件中 *****
-  void Begin(CommandCallback callback) {
-    _commandCallback = callback;
-
+  void Begin() {
     _mqttReconnectTimer =
         xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void *)this,
                      [](TimerHandle_t xTimer) {
@@ -70,6 +70,16 @@ public:
 
     connectToWifi();
   }
+
+  // Setter methods for callbacks
+  void setOnMqttMessage(CommandCallback callback) {
+    _commandCallback = callback;
+  }
+
+  void setOnMqttConnect(MqttConnectCallback callback) {
+    _connectCallback = callback;
+  }
+
   void sendMessage(const char *topic, const char *payload);
 
 private:
@@ -78,6 +88,7 @@ private:
   TimerHandle_t _wifiReconnectTimer;
 
   CommandCallback _commandCallback;
+  MqttConnectCallback _connectCallback;
 
   // MQTT事件处理函数
   void onMqttConnect(bool sessionPresent);
@@ -92,4 +103,4 @@ private:
   void connectToMqtt();
 };
 
-#endif // MQTT_CONTROLLER_H
+#endif

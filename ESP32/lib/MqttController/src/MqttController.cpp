@@ -16,7 +16,11 @@ void MqttController::onMqttConnect(bool sessionPresent) {
   DEBUG_PRINTLN("Connected to MQTT.");
   uint16_t packetIdSub = _mqttClient.subscribe(MQTT_TOPIC_COMMAND, 2);
   DEBUG_PRINTF("Subscribing to %s...\n", MQTT_TOPIC_COMMAND);
-  _mqttClient.publish(MQTT_TOPIC_STATUS, 0, true, "{\"status\":\"online\"}");
+
+  // Call user-provided custom callback if it exists
+  if (_connectCallback != nullptr) {
+    _connectCallback(sessionPresent);
+  }
 }
 
 void MqttController::onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {

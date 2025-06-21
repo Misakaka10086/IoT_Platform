@@ -10,6 +10,8 @@ NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(LED_COUNT, LED_PIN);
 MqttController mqttController;
 OTA myOta;
 
+JsonDocument device_info_JSON;
+
 // Custom validation function - remains the same
 bool customValidation() {
   Serial.println("[Validation] Starting custom validation...");
@@ -22,6 +24,16 @@ bool customValidation() {
   return true;
 }
 
+void onMqttConnect(bool sessionPresent) {
+  device_info_JSON.clear();
+  device_info_JSON["id"] = ESP.getEfuseMac();
+  device_info_JSON["chip"] = ESP.getChipModel();
+  device_info_JSON["git_version"] = FIRMWARE_VERSION;
+  device_info_JSON["status"] = "Online";
+  mqttController.sendMessage(MQTT_TOPIC_STATUS,
+                             device_info_JSON.as<String>().c_str());
+}
+
 void onOtaProgress(unsigned int progress, unsigned int total) {
   // To avoid spamming serial, only print every 10%
   static int last_percent = -1;
@@ -29,6 +41,10 @@ void onOtaProgress(unsigned int progress, unsigned int total) {
 
   if (percent > last_percent) {
     Serial.printf("OTA Progress: %d%%\n", percent);
+    device_info_JSON["status"] = "OTA Progress";
+    device_info_JSON["progress"] = percent;
+    mqttController.sendMessage(MQTT_TOPIC_STATUS,
+                               device_info_JSON.as<String>().c_str());
     last_percent = percent;
     if (last_percent >= 100)
       last_percent = -1; // Reset for next time
@@ -37,11 +53,19 @@ void onOtaProgress(unsigned int progress, unsigned int total) {
 
 void onOtaError(int error, const char *errorString) {
   Serial.printf("OTA Final Error: %d, %s\n", error, errorString);
+  device_info_JSON["status"] = "OTA Error";
+  device_info_JSON["error"] = error;
+  device_info_JSON["errorString"] = errorString;
+  mqttController.sendMessage(MQTT_TOPIC_STATUS,
+                             device_info_JSON.as<String>().c_str());
   // Maybe blink LED red rapidly to indicate permanent failure
 }
 
 void onOtaSuccess(const char *msg) {
   Serial.printf("OTA Success: %s\n", msg);
+  device_info_JSON["status"] = "OTA Success";
+  mqttController.sendMessage(MQTT_TOPIC_STATUS,
+                             device_info_JSON.as<String>().c_str());
   // Maybe solid green LED before reboot
 }
 
@@ -60,7 +84,9 @@ void setup() {
   strip.Begin();
   strip.Show();
 
-  mqttController.Begin(OTA::otaCommand);
+  mqttController.Begin();
+  mqttController.setOnMqttConnect(onMqttConnect);
+  mqttController.setOnMqttMessage(OTA::otaCommand);
 
   myOta.printFirmwareInfo();
 
