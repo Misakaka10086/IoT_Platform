@@ -1,40 +1,42 @@
-// lib/OTA/src/OTA.cpp (Enhanced with Rollback Support)
-
 #include "OTA.h"
 #include "certificate.h"
 #include <HTTPClient.h>
+#include <StreamString.h>
 #include <Update.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <esp_ota_ops.h>
 #include <mbedtls/sha256.h>
 
-extern "C" bool verifyRollbackLater() {
-  // 返回 true，告诉 Arduino
-  // Core："不要立即验证，我（用户代码）稍后会自己处理回滚逻辑。"
-  return true;
-}
+extern "C" bool verifyRollbackLater() { return true; }
 
-// Static instance pointer for command handling
 OTA *OTA::_instance = nullptr;
 
-OTA::OTA() : _rollbackEnabled(true), _validationPerformed(false) {
-  // Set the static instance pointer to this instance
+static const uint32_t DOWNLOAD_TIMEOUT_MS = 15000; // 15秒内无数据则超时
+
+OTA::OTA()
+    : _rollbackEnabled(true), _validationPerformed(false), _maxRetries(5),
+      _initialRetryDelayMs(5000), _progressCallback(nullptr),
+      _errorCallback(nullptr), _successCallback(nullptr),
+      _validationCallback(nullptr), _retryCallback(nullptr) {
   _instance = this;
 }
 
 void OTA::onProgress(OTAProgressCallback callback) {
   _progressCallback = callback;
 }
-
 void OTA::onError(OTAErrorCallback callback) { _errorCallback = callback; }
-
 void OTA::onSuccess(OTASuccessCallback callback) {
   _successCallback = callback;
 }
-
 void OTA::onValidation(OTAValidationCallback callback) {
   _validationCallback = callback;
+}
+void OTA::onRetry(OTARetryCallback callback) { _retryCallback = callback; }
+
+void OTA::setRetryPolicy(int maxRetries, int initialDelayMs) {
+  _maxRetries = maxRetries > 0 ? maxRetries : 1;
+  _initialRetryDelayMs = initialDelayMs;
 }
 
 void OTA::enableRollbackProtection(bool enable) { _rollbackEnabled = enable; }
@@ -45,13 +47,11 @@ bool OTA::isFirstBootAfterUpdate() {
     Serial.println("[OTA] Failed to get running partition");
     return false;
   }
-
   esp_ota_img_states_t ota_state;
   if (esp_ota_get_state_partition(running, &ota_state) != ESP_OK) {
     Serial.println("[OTA] Failed to get OTA state");
     return false;
   }
-
   return (ota_state == ESP_OTA_IMG_PENDING_VERIFY);
 }
 
@@ -60,22 +60,16 @@ void OTA::checkAndValidateApp() {
     Serial.println("[OTA] Rollback protection disabled, skipping validation");
     return;
   }
-
   if (!isFirstBootAfterUpdate()) {
     Serial.println("[OTA] Not first boot after update, skipping validation");
     return;
   }
-
   Serial.println("[OTA] First boot after OTA update, starting validation...");
-
-  // Perform custom validation
   if (!_performCustomValidation()) {
     Serial.println("[OTA] Custom validation failed, marking app invalid");
     markAppInvalid();
     return;
   }
-
-  // Validation passed
   Serial.println("[OTA] Custom validation passed, marking app valid");
   markAppValid();
 }
@@ -92,7 +86,6 @@ void OTA::markAppValid() {
 void OTA::markAppInvalid() {
   if (esp_ota_mark_app_invalid_rollback_and_reboot() == ESP_OK) {
     Serial.println("[OTA] App marked as invalid, rollback initiated");
-    // The device will reboot automatically
   } else {
     Serial.println("[OTA] Failed to mark app as invalid");
   }
@@ -101,206 +94,236 @@ void OTA::markAppInvalid() {
 bool OTA::_performCustomValidation() {
   if (!_validationCallback) {
     Serial.println("[OTA] No custom validation callback provided, skipping");
-    return true; // No custom validation means pass
+    return true;
   }
-
   Serial.println("[OTA] Performing custom validation...");
-
-  // Set a timeout for custom validation
   unsigned long startTime = millis();
-  bool validationResult = false;
-
-  // Try to perform validation with timeout
   while (millis() - startTime < VALIDATION_TIMEOUT) {
-    validationResult = _validationCallback();
-    if (validationResult) {
+    if (_validationCallback()) {
       Serial.println("[OTA] Custom validation passed");
       return true;
     }
-    delay(100); // Small delay to prevent tight loop
+    delay(100);
   }
-
   Serial.println("[OTA] Custom validation failed or timed out");
   return false;
 }
 
-// This is the C++ member function that cannot be called directly by xTaskCreate
 void OTA::_updateTask(void *pvParameters) {
   OTATaskParams *params = (OTATaskParams *)pvParameters;
   String url = params->url;
   String root_ca_str = params->root_ca;
-  String sha256_hash = params->sha256; // Extract SHA256 hash
-
-  // Clean up the passed parameter structure to prevent memory leaks
+  String sha256_hash_str = params->sha256;
   delete params;
 
-  // --- All the previous updateFromURL logic ---
-  if (WiFi.status() != WL_CONNECTED) {
-    if (_errorCallback)
-      _errorCallback(0, "WiFi not connected");
-    vTaskDelete(NULL); // Task must delete itself before ending
-    return;
-  }
+  bool overall_success = false;
 
-  HTTPClient http;
-  WiFiClient *client = nullptr;
-  if (url.startsWith("https://")) {
-    WiFiClientSecure *secure_client = new WiFiClientSecure;
-    if (!root_ca_str.isEmpty()) {
-      secure_client->setCACert(root_ca_str.c_str());
-      Serial.println("INFO: Certificate validation is ENABLED.");
-    } else {
-      secure_client->setInsecure();
-      Serial.println(
-          "WARNING: Certificate validation is DISABLED! This is insecure!");
-    }
-    client = secure_client;
-  } else {
-    client = new WiFiClient;
-  }
+  for (int attempt = 1; attempt <= _maxRetries; ++attempt) {
+    bool attempt_succeeded = false;
+    bool is_fatal_error = false;
+    int error_code = 0;
+    String error_message = "";
 
-  http.begin(*client, url);
-  int httpCode = http.GET();
-  if (httpCode != HTTP_CODE_OK) {
-    if (_errorCallback)
-      _errorCallback(httpCode, http.errorToString(httpCode).c_str());
-    http.end();
-    delete client;
-    vTaskDelete(NULL);
-    return;
-  }
+    Serial.printf("[OTA] Starting update attempt %d/%d from %s\n", attempt,
+                  _maxRetries, url.c_str());
 
-  int contentLength = http.getSize();
-  if (contentLength <= 0) {
-    if (_errorCallback)
-      _errorCallback(-1, "Content-Length header invalid");
-    http.end();
-    delete client;
-    vTaskDelete(NULL);
-    return;
-  }
-
-  if (!Update.begin(contentLength)) {
-    if (_errorCallback)
-      _errorCallback(-2, "Not enough space to begin OTA");
-    Update.printError(Serial);
-    http.end();
-    delete client;
-    vTaskDelete(NULL);
-    return;
-  }
-
-  // Initialize SHA256 context for verification
-  mbedtls_sha256_context sha256_ctx;
-  uint8_t calculated_hash[32];
-  bool sha256_verification_enabled = !sha256_hash.isEmpty();
-
-  if (sha256_verification_enabled) {
-    Serial.println("[OTA] SHA256 verification enabled");
-    mbedtls_sha256_init(&sha256_ctx);
-    mbedtls_sha256_starts(&sha256_ctx, 0); // 0 = SHA256, 1 = SHA224
-  }
-
-  size_t written = 0;
-  static uint8_t buff[4096] = {0};
-  Stream &stream = http.getStream();
-  while (http.connected() && (written < contentLength)) {
-    size_t len = stream.readBytes(buff, sizeof(buff));
-    if (len > 0) {
-      if (Update.write(buff, len) != len) {
-        if (_errorCallback)
-          _errorCallback(-3, "Flash write error");
-        Update.abort();
+    do {
+      if (WiFi.status() != WL_CONNECTED) {
+        error_code = OTA_TRANSIENT_WIFI_DISCONNECTED;
+        error_message = "WiFi not connected";
         break;
       }
 
-      // Update SHA256 hash if verification is enabled
+      HTTPClient http;
+      WiFiClient *client = nullptr;
+
+      if (url.startsWith("https://")) {
+        WiFiClientSecure *secure_client = new WiFiClientSecure;
+        if (!root_ca_str.isEmpty()) {
+          secure_client->setCACert(root_ca_str.c_str());
+        } else {
+          secure_client->setInsecure();
+          Serial.println("[OTA] WARNING: Certificate validation is DISABLED! "
+                         "This is insecure!");
+        }
+        client = secure_client;
+      } else {
+        client = new WiFiClient;
+      }
+
+      http.begin(*client, url);
+
+      int httpCode = http.GET();
+      if (httpCode != HTTP_CODE_OK) {
+        if (httpCode >= 400 && httpCode < 500) {
+          is_fatal_error = true;
+          error_code = OTA_FATAL_HTTP_4XX_ERROR;
+        } else {
+          error_code = OTA_TRANSIENT_HTTP_GET_FAILED;
+        }
+        error_message = "HTTP GET failed: " + http.errorToString(httpCode);
+        http.end();
+        delete client;
+        break;
+      }
+
+      int contentLength = http.getSize();
+      if (contentLength <= 0) {
+        error_code = OTA_TRANSIENT_NO_CONTENT_LENGTH;
+        error_message = "Content-Length header invalid or missing";
+        http.end();
+        delete client;
+        break;
+      }
+      Serial.printf("[OTA] Firmware size: %d bytes\n", contentLength);
+
+      if (!Update.begin(contentLength)) {
+        is_fatal_error = true;
+        error_code = OTA_FATAL_NO_SPACE;
+        StreamString updateErrorStream;
+        Update.printError(updateErrorStream);
+        error_message = "Not enough space to begin OTA: " + updateErrorStream;
+        http.end();
+        delete client;
+        break;
+      }
+
+      size_t written = 0;
+      uint8_t buff[4096] = {0};
+      Stream &stream = http.getStream();
+      bool sha256_verification_enabled = !sha256_hash_str.isEmpty();
+      mbedtls_sha256_context sha256_ctx;
+
       if (sha256_verification_enabled) {
-        mbedtls_sha256_update(&sha256_ctx, buff, len);
+        mbedtls_sha256_init(&sha256_ctx);
+        mbedtls_sha256_starts(&sha256_ctx, 0);
       }
 
-      written += len;
-      if (_progressCallback && (written % 1024 == 0)) // 每100KB报告一次
-        _progressCallback(written, contentLength);
-      // Simple delay is sufficient for scheduler in independent task
-      vTaskDelay(1);
+      unsigned long lastDataTime = millis();
+      while (http.connected() && (written < contentLength)) {
+        if (millis() - lastDataTime > DOWNLOAD_TIMEOUT_MS) {
+          error_code = OTA_TRANSIENT_DOWNLOAD_TIMEOUT;
+          error_message = "Download timed out (no data received)";
+          break;
+        }
+
+        size_t len = stream.readBytes(buff, sizeof(buff));
+        if (len > 0) {
+          lastDataTime = millis();
+          if (Update.write(buff, len) != len) {
+            is_fatal_error = true;
+            error_code = OTA_FATAL_FLASH_WRITE_ERROR;
+            error_message = "Flash write error";
+            break;
+          }
+          if (sha256_verification_enabled) {
+            mbedtls_sha256_update(&sha256_ctx, buff, len);
+          }
+          written += len;
+          if (_progressCallback) {
+            _progressCallback(written, contentLength);
+          }
+        }
+        vTaskDelay(1);
+      }
+
+      if (error_code != 0 || is_fatal_error) {
+        http.end();
+        delete client;
+        break;
+      }
+
+      if (written != contentLength) {
+        error_code = OTA_TRANSIENT_DOWNLOAD_INCOMPLETE;
+        error_message = "Download incomplete";
+        http.end();
+        delete client;
+        break;
+      }
+
+      if (sha256_verification_enabled) {
+        uint8_t calculated_hash[32];
+        uint8_t expected_hash[32];
+        mbedtls_sha256_finish(&sha256_ctx, calculated_hash);
+        mbedtls_sha256_free(&sha256_ctx);
+        _hexStringToBytes(sha256_hash_str, expected_hash, 32);
+
+        if (memcmp(calculated_hash, expected_hash, 32) != 0) {
+          is_fatal_error = true;
+          error_code = OTA_FATAL_SHA256_MISMATCH;
+          error_message = "SHA256 verification failed";
+          http.end();
+          delete client;
+          break;
+        }
+        Serial.println("[OTA] SHA256 verification passed.");
+      }
+
+      attempt_succeeded = true;
+      http.end();
+      delete client;
+
+    } while (false);
+
+    if (attempt_succeeded) {
+      overall_success = true;
+      break;
     }
-  }
 
-  http.end();
-  delete client;
-  if (written != contentLength) {
-    if (_errorCallback)
-      _errorCallback(-4, "Download incomplete");
     Update.abort();
-    vTaskDelete(NULL);
-    return;
-  }
 
-  // Complete SHA256 calculation if verification is enabled
-  if (sha256_verification_enabled) {
-    mbedtls_sha256_finish(&sha256_ctx, calculated_hash);
-    mbedtls_sha256_free(&sha256_ctx);
-
-    Serial.println("[OTA] Verifying SHA256 hash...");
-
-    // Convert expected hash string to bytes
-    uint8_t expected_hash[32];
-    _hexStringToBytes(sha256_hash, expected_hash, 32);
-
-    // Compare hashes
-    if (memcmp(calculated_hash, expected_hash, 32) != 0) {
-      Serial.println("[OTA] SHA256 verification failed!");
-      Serial.print("[OTA] Expected: ");
-      for (int i = 0; i < 32; i++) {
-        Serial.printf("%02x", expected_hash[i]);
+    if (is_fatal_error || attempt == _maxRetries) {
+      Serial.printf("[OTA] Final error after %d attempts: %s (Code: %d)\n",
+                    attempt, error_message.c_str(), error_code);
+      if (_errorCallback) {
+        _errorCallback(error_code, error_message.c_str());
       }
-      Serial.println();
-      Serial.print("[OTA] Calculated: ");
-      for (int i = 0; i < 32; i++) {
-        Serial.printf("%02x", calculated_hash[i]);
-      }
-      Serial.println();
-
-      if (_errorCallback)
-        _errorCallback(-5, "SHA256 verification failed");
-      Update.abort();
       vTaskDelete(NULL);
       return;
     }
 
-    Serial.println("[OTA] SHA256 verification passed");
+    unsigned long delay_ms = _initialRetryDelayMs * (1 << (attempt - 1));
+    Serial.printf("[OTA] Attempt %d failed: %s. Retrying in %lu ms...\n",
+                  attempt, error_message.c_str(), delay_ms);
+
+    if (_retryCallback) {
+      _retryCallback(attempt, _maxRetries, error_message.c_str(), delay_ms);
+    }
+    vTaskDelay(pdMS_TO_TICKS(delay_ms));
   }
 
-  if (!Update.end(true)) {
-    if (_errorCallback)
-      _errorCallback(Update.getError(), "Update.end() failed");
-    vTaskDelete(NULL);
-    return;
+  if (overall_success) {
+    if (!Update.end(true)) {
+      int final_error_code = OTA_FATAL_UPDATE_END_FAILED;
+      StreamString updateErrorStream;
+      Update.printError(updateErrorStream);
+      String final_error_msg =
+          "Update.end() failed. Error: " + updateErrorStream;
+      Serial.printf("[OTA] FATAL ERROR: %s\n", final_error_msg.c_str());
+      if (_errorCallback) {
+        _errorCallback(final_error_code, final_error_msg.c_str());
+      }
+    } else {
+      const char *success_msg = "Update successful! Rebooting...";
+      Serial.printf("[OTA] %s\n", success_msg);
+      if (_successCallback) {
+        _successCallback(success_msg);
+      }
+      delay(1000);
+      ESP.restart();
+    }
   }
 
-  if (_successCallback)
-    _successCallback("Update successful! Rebooting...");
-
-  delay(1000);
-  ESP.restart();
-  // Code after ESP.restart() won't execute, but kept for completeness
   vTaskDelete(NULL);
 }
 
-// This is a static "trampoline" function that FreeRTOS uses to call our C++
-// member function
 void OTA::_updateTaskTrampoline(void *pvParameters) {
   OTATaskParams *params = (OTATaskParams *)pvParameters;
-  // Get the this pointer from parameters, then call the actual member
-  // function
   params->instance->_updateTask(pvParameters);
 }
 
-// This is the new public function that only starts the task
 void OTA::updateFromURL(const String &url, const char *root_ca,
                         const char *sha256) {
-  // Dynamically allocate parameter structure to pass to new task
   OTATaskParams *params = new OTATaskParams();
   params->instance = this;
   params->url = url;
@@ -310,16 +333,8 @@ void OTA::updateFromURL(const String &url, const char *root_ca,
   if (sha256) {
     params->sha256 = sha256;
   }
-
-  // Create task
-  // xTaskCreate(function, name, stack_size, parameters, priority,
-  // task_handle)
-  xTaskCreate(_updateTaskTrampoline, "OTA_Update_Task",
-              12288,  // OTA + HTTPS needs larger stack space
-              params, // Pass parameters
-              10,     // Task priority
-              NULL    // Task handle, we don't need it
-  );
+  xTaskCreate(_updateTaskTrampoline, "OTA_Update_Task", 12288, params, 10,
+              NULL);
 }
 
 void OTA::printFirmwareInfo() {
@@ -405,45 +420,32 @@ void OTA::printFirmwareInfo() {
   }
 }
 
-// Convert hex string to bytes
 void OTA::_hexStringToBytes(const String &hexString, uint8_t *bytes,
                             size_t length) {
-  // Remove any spaces or colons from the hex string
   String cleanHex = hexString;
   cleanHex.replace(" ", "");
   cleanHex.replace(":", "");
   cleanHex.toLowerCase();
-
-  // Ensure the hex string is the correct length (2 characters per byte)
   if (cleanHex.length() != length * 2) {
-    Serial.printf("[OTA] Invalid hex string length: %d (expected %d)\n",
-                  cleanHex.length(), length * 2);
-    // Fill with zeros if invalid
     memset(bytes, 0, length);
     return;
   }
-
-  // Convert hex string to bytes
   for (size_t i = 0; i < length; i++) {
     String byteString = cleanHex.substring(i * 2, i * 2 + 2);
     bytes[i] = (uint8_t)strtol(byteString.c_str(), NULL, 16);
   }
 }
 
-// Static MQTT command handler - can be passed directly to
-// MqttController.Begin()
 void OTA::otaCommand(const char *payload) {
   if (_instance == nullptr) {
     Serial.println(
         "[OTA] Error: No OTA instance available for command handling");
     return;
   }
-
   Serial.printf("[OTA] Received MQTT command: %s\n", payload);
   _instance->_parseOtaCommand(payload);
 }
 
-// MQTT command parsing function
 void OTA::_parseOtaCommand(const char *payload) {
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, payload);
@@ -453,27 +455,15 @@ void OTA::_parseOtaCommand(const char *payload) {
     return;
   }
 
-  // Check if OTA parameters exist
   if (doc["OTA"]["firmwareUrl"].is<const char *>()) {
     const char *firmwareUrl = doc["OTA"]["firmwareUrl"];
-    const char *sha256 = nullptr;
-
-    // SHA256 is optional
-    if (doc["OTA"]["SHA256"].is<const char *>()) {
-      sha256 = doc["OTA"]["SHA256"];
-      Serial.printf("[OTA] Received firmware URL: %s\n", firmwareUrl);
+    const char *sha256 = doc["OTA"]["SHA256"]; // Can be null
+    Serial.printf("[OTA] Received firmware URL: %s\n", firmwareUrl);
+    if (sha256) {
       Serial.printf("[OTA] Received SHA256: %s\n", sha256);
-    } else {
-      Serial.printf("[OTA] Received firmware URL: %s (no SHA256 provided)\n",
-                    firmwareUrl);
     }
-
-    // Start OTA update with SHA256 verification if provided
-    Serial.println("[OTA] Starting OTA update...");
     updateFromURL(firmwareUrl, root_ca, sha256);
   } else {
     Serial.println("[OTA] Invalid or missing OTA parameters in MQTT message");
-    Serial.println("[OTA] Expected format: {\"OTA\": {\"firmwareUrl\": "
-                   "\"http://...\", \"SHA256\": \"...\"}}");
   }
 }
