@@ -16,6 +16,7 @@ import { DeviceCard } from "./components/DeviceCard";
 import { mqttService } from "./services/mqttService";
 import { deviceStatusService } from "./services/deviceStatusService";
 import { Device, DeviceStatus } from "../types/device";
+import { emqxApiService } from "./services/emqxApiService";
 
 export default function Home() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -51,26 +52,21 @@ export default function Home() {
     // Check connection status
     setIsConnected(mqttService.isConnected());
 
-    // Check EMQX configuration
+    // Check EMQX configuration and initialize
     const checkEmqxConfig = () => {
-      const savedApiConfig = localStorage.getItem("emqxApiConfig");
       const savedMqttConfig = localStorage.getItem("mqttConfig");
 
-      if (savedApiConfig && savedMqttConfig) {
+      if (savedMqttConfig) {
         try {
-          const apiConfig = JSON.parse(savedApiConfig);
           const mqttConfig = JSON.parse(savedMqttConfig);
 
-          if (apiConfig.apiKey && apiConfig.secretKey && mqttConfig.host) {
-            deviceStatusService.initEmqxApi(
-              apiConfig.apiKey,
-              apiConfig.secretKey,
-              mqttConfig.host
-            );
+          if (mqttConfig.host) {
+            console.log("🔗 Initializing EMQX API with host:", mqttConfig.host);
+            deviceStatusService.initEmqxApi(mqttConfig.host);
             setEmqxConfigured(true);
           }
         } catch (error) {
-          console.error("Error loading EMQX config:", error);
+          console.error("Error loading MQTT config:", error);
         }
       }
     };

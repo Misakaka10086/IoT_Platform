@@ -15,15 +15,17 @@ class DeviceStatusService {
     private emqxPollingInterval: NodeJS.Timeout | null = null;
     private isEmqxEnabled: boolean = false;
 
-    // Initialize EMQX API service with MQTT host
-    initEmqxApi(apiKey: string, secretKey: string, mqttHost: string) {
-        if (apiKey && secretKey && mqttHost) {
-            emqxApiService.init(apiKey, secretKey, mqttHost);
+    // Initialize EMQX API service with MQTT host only
+    initEmqxApi(mqttHost: string) {
+        if (mqttHost) {
+            emqxApiService.init(mqttHost);
             this.isEmqxEnabled = true;
             this.startEmqxPolling();
+            console.log('🔄 EMQX API polling started for host:', mqttHost);
         } else {
             this.isEmqxEnabled = false;
             this.stopEmqxPolling();
+            console.log('🔄 EMQX API polling stopped - no host provided');
         }
     }
 
@@ -33,10 +35,13 @@ class DeviceStatusService {
             clearInterval(this.emqxPollingInterval);
         }
 
+        console.log('🔄 Starting EMQX API polling...');
+
         // Poll every 10 seconds
         this.emqxPollingInterval = setInterval(async () => {
             if (this.isEmqxEnabled) {
                 try {
+                    console.log('🔄 EMQX API polling cycle started...');
                     const emqxStatuses = await emqxApiService.getDeviceStatuses();
 
                     // Clear existing statuses and update with EMQX data
@@ -55,6 +60,8 @@ class DeviceStatusService {
                 }
             }
         }, 10000);
+
+        console.log('🔄 EMQX API polling interval set to 10 seconds');
     }
 
     // Stop EMQX polling
@@ -62,6 +69,7 @@ class DeviceStatusService {
         if (this.emqxPollingInterval) {
             clearInterval(this.emqxPollingInterval);
             this.emqxPollingInterval = null;
+            console.log('🔄 EMQX API polling stopped');
         }
     }
 
@@ -139,7 +147,7 @@ class DeviceStatusService {
 
     // Get EMQX configuration status
     isEmqxConfigured(): boolean {
-        return this.isEmqxEnabled && emqxApiService.isConfigured();
+        return this.isEmqxEnabled;
     }
 
     // Manual refresh from EMQX API
@@ -147,6 +155,7 @@ class DeviceStatusService {
         if (!this.isEmqxEnabled) return;
 
         try {
+            console.log('🔄 Manual refresh from EMQX API started...');
             const emqxStatuses = await emqxApiService.getDeviceStatuses();
 
             // Clear existing statuses and update with EMQX data

@@ -24,24 +24,18 @@ import { mqttService, MqttConfig } from "../services/mqttService";
 
 export default function SettingsPage() {
   const [config, setConfig] = useState<MqttConfig>({
-    host: "localhost",
+    host: "",
     port: 1883,
+    path: "",
+    subscriptionTopic: "device/+/status",
     username: "",
     password: "",
-    clientId: `web_client_${Math.random().toString(36).substr(2, 9)}`,
-    useWebSocket: false,
-    path: "/mqtt", // Default path
-    subscriptionTopic: "device/+/status", // Default subscription topic
-  });
-
-  const [apiConfig, setApiConfig] = useState({
-    apiKey: "",
-    secretKey: "",
+    clientId: `web-client-${Math.random().toString(36).substr(2, 9)}`,
+    useWebSocket: true,
   });
 
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isTesting, setIsTesting] = useState(false); // This state is no longer used but we keep it to minimize diff
   const [isTestingApi, setIsTestingApi] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -55,17 +49,6 @@ export default function SettingsPage() {
         setConfig(parsedConfig);
       } catch (error) {
         console.error("Error loading saved config:", error);
-      }
-    }
-
-    // Load saved API config from localStorage
-    const savedApiConfig = localStorage.getItem("emqxApiConfig");
-    if (savedApiConfig) {
-      try {
-        const parsedApiConfig = JSON.parse(savedApiConfig);
-        setApiConfig(parsedApiConfig);
-      } catch (error) {
-        console.error("Error loading saved API config:", error);
       }
     }
 
@@ -83,25 +66,13 @@ export default function SettingsPage() {
     }));
   };
 
-  const handleApiConfigChange = (field: string, value: string) => {
-    setApiConfig((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
   const handleSave = () => {
     localStorage.setItem("mqttConfig", JSON.stringify(config));
-    localStorage.setItem("emqxApiConfig", JSON.stringify(apiConfig));
     setSuccess("Configuration saved successfully!");
     setError(null);
 
     // Clear success message after 3 seconds
     setTimeout(() => setSuccess(null), 3000);
-  };
-
-  const handleTestConnection = async () => {
-    // This function is no longer used
   };
 
   const handleConnect = async () => {
@@ -132,11 +103,6 @@ export default function SettingsPage() {
   };
 
   const handleTestApiConnection = async () => {
-    if (!apiConfig.apiKey || !apiConfig.secretKey) {
-      setError("Please enter both API Key and Secret Key");
-      return;
-    }
-
     if (!config.host) {
       setError("Please configure MQTT host first");
       return;
@@ -147,22 +113,20 @@ export default function SettingsPage() {
     setSuccess(null);
 
     try {
-      // Initialize device status service with API config and MQTT host
+      // Initialize device status service with MQTT host only
       const { deviceStatusService } = await import(
         "../services/deviceStatusService"
       );
-      deviceStatusService.initEmqxApi(
-        apiConfig.apiKey,
-        apiConfig.secretKey,
-        config.host
-      );
+      deviceStatusService.initEmqxApi(config.host);
 
       const isConnected = await deviceStatusService.testEmqxConnection();
 
       if (isConnected) {
         setSuccess("✅ EMQX API connection successful!");
       } else {
-        setError("❌ EMQX API connection failed");
+        setError(
+          "❌ EMQX API connection failed. Please check your environment variables."
+        );
       }
     } catch (error) {
       const errorMessage =
@@ -338,59 +302,45 @@ export default function SettingsPage() {
             <ApiIcon sx={{ mr: 1 }} />
             <Typography variant="h6">EMQX API Configuration</Typography>
           </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Configure EMQX API credentials to fetch device connection status
-          </Typography>
 
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="API Key"
-                value={apiConfig.apiKey}
-                onChange={(e) =>
-                  handleApiConfigChange("apiKey", e.target.value)
-                }
-                margin="normal"
-                helperText="EMQX API key for authentication"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                fullWidth
-                label="Secret Key"
-                type="password"
-                value={apiConfig.secretKey}
-                onChange={(e) =>
-                  handleApiConfigChange("secretKey", e.target.value)
-                }
-                margin="normal"
-                helperText="EMQX API secret key for authentication"
-              />
-            </Grid>
-          </Grid>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              EMQX API credentials are configured via environment variables:
+              <br />
+              <code>EMQX_API_KEY</code> and <code>EMQX_SECRET_KEY</code>
+            </Typography>
+          </Alert>
 
-          <Box sx={{ mt: 3 }}>
-            <Button
-              variant="outlined"
-              onClick={handleSave}
-              startIcon={<SaveIcon />}
-            >
-              Save API Configuration
-            </Button>
+          <Box sx={{ mt: 2 }}>
             <Button
               variant="contained"
               onClick={handleTestApiConnection}
-              disabled={
-                isTestingApi || !apiConfig.apiKey || !apiConfig.secretKey
-              }
+              disabled={isTestingApi || !config.host}
               startIcon={
                 isTestingApi ? <CircularProgress size={16} /> : <ApiIcon />
               }
-              sx={{ ml: 2 }}
             >
               {isTestingApi ? "Testing..." : "Test API Connection"}
             </Button>
+          </Box>
+
+          <Box sx={{ mt: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={
+                    !!process.env.EMQX_API_KEY && !!process.env.EMQX_SECRET_KEY
+                  }
+                  disabled
+                  color="success"
+                />
+              }
+              label={`API Configuration: ${
+                process.env.EMQX_API_KEY && process.env.EMQX_SECRET_KEY
+                  ? "Configured"
+                  : "Not Configured"
+              }`}
+            />
           </Box>
         </CardContent>
       </Card>

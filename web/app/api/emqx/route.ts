@@ -5,13 +5,22 @@ export async function GET(request: NextRequest) {
         // Get query parameters
         const { searchParams } = new URL(request.url);
         const path = searchParams.get('path') || 'clients';
-        const apiKey = searchParams.get('apiKey');
-        const secretKey = searchParams.get('secretKey');
         const host = searchParams.get('host');
 
-        if (!apiKey || !secretKey || !host) {
+        // Get API credentials from environment variables
+        const apiKey = process.env.EMQX_API_KEY;
+        const secretKey = process.env.EMQX_SECRET_KEY;
+
+        if (!apiKey || !secretKey) {
             return NextResponse.json(
-                { error: 'Missing required parameters: apiKey, secretKey, host' },
+                { error: 'EMQX API credentials not configured in environment variables' },
+                { status: 500 }
+            );
+        }
+
+        if (!host) {
+            return NextResponse.json(
+                { error: 'Missing required parameter: host' },
                 { status: 400 }
             );
         }

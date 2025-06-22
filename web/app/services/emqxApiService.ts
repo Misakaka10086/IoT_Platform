@@ -66,35 +66,28 @@ export interface EmqxApiResponse {
 }
 
 class EmqxApiService {
-    private apiKey: string = '';
-    private secretKey: string = '';
     private mqttHost: string = '';
 
-    // Initialize API configuration with MQTT host
-    init(apiKey: string, secretKey: string, mqttHost: string) {
-        this.apiKey = apiKey;
-        this.secretKey = secretKey;
+    // Initialize API configuration with MQTT host only
+    init(mqttHost: string) {
         this.mqttHost = mqttHost;
-
-        console.log('🔗 EMQX API configured with MQTT host:', {
-            mqttHost,
-            apiKey: apiKey ? '***' : 'not set',
-            secretKey: secretKey ? '***' : 'not set'
-        });
+        console.log('🔗 EMQX API initialized with MQTT host:', mqttHost);
     }
 
     // Get all connected clients via proxy
     async getClients(): Promise<EmqxClient[]> {
         try {
+            console.log('🔗 Fetching EMQX clients for host:', this.mqttHost);
+
             // Use our backend proxy to avoid CORS issues
             const params = new URLSearchParams({
                 path: 'clients',
-                apiKey: this.apiKey,
-                secretKey: this.secretKey,
                 host: this.mqttHost
             });
 
             const url = `/api/emqx?${params.toString()}`;
+            console.log('🔗 EMQX API request URL:', url);
+
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -107,6 +100,7 @@ class EmqxApiService {
             }
 
             const data: EmqxApiResponse = await response.json();
+            console.log('🔗 EMQX API response received:', data);
             return data.data || [];
         } catch (error) {
             console.error('Error fetching EMQX clients:', error);
@@ -193,7 +187,7 @@ class EmqxApiService {
 
     // Get API configuration status
     isConfigured(): boolean {
-        return !!(this.apiKey && this.secretKey);
+        return !!this.mqttHost;
     }
 }
 
