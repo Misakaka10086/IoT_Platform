@@ -22,12 +22,6 @@ public:
                        static_cast<MqttController *>(pvTimerGetTimerID(xTimer))
                            ->connectToMqtt();
                      });
-    _wifiReconnectTimer =
-        xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void *)this,
-                     [](TimerHandle_t xTimer) {
-                       static_cast<MqttController *>(pvTimerGetTimerID(xTimer))
-                           ->connectToWifi();
-                     });
 
     _mqttClient.onConnect(
         [this](bool sessionPresent) { this->onMqttConnect(sessionPresent); });
@@ -43,33 +37,26 @@ public:
       this->onMqttMessage(topic, payload, properties, len, index, total);
     });
 
+// Use default configuration from secrets.h if available
+#ifdef MQTT_HOST
     _mqttClient.setServer(MQTT_HOST, MQTT_PORT);
     if (strlen(MQTT_USER) > 0) {
       _mqttClient.setCredentials(MQTT_USER, MQTT_PASSWORD);
     }
+#endif
 
-    // 使用Lambda表达式注册WiFi事件
-    WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info) {
-      DEBUG_PRINTF("[WiFi-event] event: %d\n", event);
-      switch (event) {
-      case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-        DEBUG_PRINTLN("WiFi connected");
-        DEBUG_PRINT("IP address: ");
-        DEBUG_PRINTLN(WiFi.localIP());
-        connectToMqtt();
-        break;
-      case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-        DEBUG_PRINTLN("WiFi lost connection");
-        xTimerStop(_mqttReconnectTimer, 0);
-        xTimerStart(_wifiReconnectTimer, 0);
-        break;
-      default:
-        break;
-      }
-    });
-
-    connectToWifi();
+    // Connect to MQTT if WiFi is already connected
+    if (WiFi.status() == WL_CONNECTED) {
+      connectToMqtt();
+    }
   }
+
+  // Dynamic configuration method
+  void updateConfig(const String &host, uint16_t port, const String &user = "",
+                    const String &password = "");
+
+  // Set client ID method
+  void setClientId(const String &clientId);
 
   // Setter methods for callbacks
   void setOnMqttMessage(CommandCallback callback) {
@@ -84,8 +71,14 @@ public:
 
 private:
   AsyncMqttClient _mqttClient;
+
+  String _host;
+  uint16_t _port;
+  String _user;
+  String _password;
+  String _clientId;
+
   TimerHandle_t _mqttReconnectTimer;
-  TimerHandle_t _wifiReconnectTimer;
 
   CommandCallback _commandCallback;
   MqttConnectCallback _connectCallback;
@@ -98,8 +91,7 @@ private:
                      AsyncMqttClientMessageProperties properties, size_t len,
                      size_t index, size_t total);
 
-  // WiFi连接函数
-  void connectToWifi();
+  // MQTT连接函数
   void connectToMqtt();
 };
 

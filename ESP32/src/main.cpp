@@ -1,4 +1,5 @@
 #include <ArduinoJson.h>
+#include <DeviceConfigManager.h>
 #include <MqttController.h>
 #include <NeoPixelBus.h>
 #include <OTA.h>
@@ -9,6 +10,7 @@
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(LED_COUNT, LED_PIN);
 MqttController mqttController;
 OTA myOta;
+DeviceConfigManager configManager;
 
 JsonDocument device_info_JSON;
 
@@ -26,10 +28,13 @@ bool customValidation() {
 
 void onMqttConnect(bool sessionPresent) {
   device_info_JSON.clear();
-  device_info_JSON["id"] = ESP.getEfuseMac();
-  device_info_JSON["chip"] = ESP.getChipModel();
+  device_info_JSON["id"] = configManager.getDeviceId();
+  device_info_JSON["chip"] = configManager.getChipType();
   device_info_JSON["git_version"] = FIRMWARE_VERSION;
   device_info_JSON["status"] = "Online";
+  if (configManager.isConfigLoaded()) {
+    device_info_JSON["config_version"] = configManager.getConfigVersion();
+  }
   mqttController.sendMessage(MQTT_TOPIC_STATUS,
                              device_info_JSON.as<String>().c_str());
 }
@@ -84,7 +89,50 @@ void setup() {
   strip.Begin();
   strip.Show();
 
+  Serial.println("[Main] Starting device initialization...");
+
+  // Load device configuration (includes WiFi connection)
+  Serial.println("[Main] Loading device configuration...");
+  bool configLoaded = false;
+
+  // Try to load configuration multiple times
+  for (int i = 0; i < 3; i++) {
+    if (configManager.loadDeviceConfig()) {
+      Serial.println("[Main] Configuration loaded successfully");
+      configLoaded = true;
+      break;
+    } else {
+      Serial.printf(
+          "[Main] Configuration load attempt %d failed, retrying...\n", i + 1);
+      delay(2000);
+    }
+  }
+
+  if (!configLoaded) {
+    Serial.println(
+        "[Main] Failed to load configuration after 3 attempts, using defaults");
+  }
+  // Update MQTT configuration if config was loaded
+  if (configLoaded) {
+    Serial.println("[Main] Updating MQTT configuration...");
+    Serial.printf("[Main] MQTT Host: %s\n", configManager.getMqttHost());
+    Serial.printf("[Main] MQTT Port: %d\n", configManager.getMqttPort());
+    Serial.printf("[Main] MQTT User: %s\n", configManager.getMqttUser());
+    Serial.printf("[Main] MQTT Password: %s\n",
+                  configManager.getMqttPassword());
+    mqttController.updateConfig(
+        configManager.getMqttHost(), configManager.getMqttPort(),
+        configManager.getMqttUser(), configManager.getMqttPassword());
+
+    // Set custom client ID based on device ID
+    mqttController.setClientId("ESP32-" + configManager.getDeviceId());
+    Serial.printf("[Main] Set MQTT client ID to: %s\n",
+                  configManager.getDeviceId());
+  }
+
+  // Initialize MQTT controller
   mqttController.Begin();
+
   mqttController.setOnMqttConnect(onMqttConnect);
   mqttController.setOnMqttMessage(OTA::otaCommand);
 

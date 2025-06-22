@@ -1,95 +1,254 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Typography,
+  Grid,
+  Alert,
+  Paper,
+  Chip,
+  CircularProgress,
+  Button,
+} from "@mui/material";
+import { Refresh as RefreshIcon } from "@mui/icons-material";
+import { DeviceCard } from "./components/DeviceCard";
+import { mqttService } from "./services/mqttService";
+import { deviceStatusService } from "./services/deviceStatusService";
+import { Device, DeviceStatus } from "../types/device";
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [deviceStatuses, setDeviceStatuses] = useState<DeviceStatus[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [emqxConfigured, setEmqxConfigured] = useState(false);
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  useEffect(() => {
+    // Load devices from database
+    const loadDevices = async () => {
+      try {
+        const response = await fetch("/api/devices");
+        if (response.ok) {
+          const deviceData: Device[] = await response.json();
+          setDevices(deviceData);
+        }
+      } catch (error) {
+        console.error("Error loading devices:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDevices();
+
+    // Subscribe to device status updates from MQTT and EMQX
+    const unsubscribeStatus = deviceStatusService.subscribe((statuses) => {
+      setDeviceStatuses(statuses);
+    });
+
+    // Check connection status
+    setIsConnected(mqttService.isConnected());
+
+    // Check EMQX configuration
+    const checkEmqxConfig = () => {
+      const savedApiConfig = localStorage.getItem("emqxApiConfig");
+      const savedMqttConfig = localStorage.getItem("mqttConfig");
+
+      if (savedApiConfig && savedMqttConfig) {
+        try {
+          const apiConfig = JSON.parse(savedApiConfig);
+          const mqttConfig = JSON.parse(savedMqttConfig);
+
+          if (apiConfig.apiKey && apiConfig.secretKey && mqttConfig.host) {
+            deviceStatusService.initEmqxApi(
+              apiConfig.apiKey,
+              apiConfig.secretKey,
+              mqttConfig.host
+            );
+            setEmqxConfigured(true);
+          }
+        } catch (error) {
+          console.error("Error loading EMQX config:", error);
+        }
+      }
+    };
+
+    checkEmqxConfig();
+
+    return unsubscribeStatus;
+  }, []);
+
+  // Combine database devices with MQTT/EMQX statuses
+  const devicesWithStatus = devices.map((device) => {
+    const status = deviceStatuses.find((s) => s.device_id === device.device_id);
+    return {
+      ...device,
+      status: status?.status || "offline",
+      last_seen: status?.last_seen || device.last_seen,
+      data: status?.data,
+    };
+  });
+
+  const onlineDevices = devicesWithStatus.filter(
+    (device) => device.status === "online"
+  );
+  const offlineDevices = devicesWithStatus.filter(
+    (device) => device.status === "offline"
+  );
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await deviceStatusService.refreshFromEmqx();
+    } catch (error) {
+      console.error("Error refreshing device statuses:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "200px",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 3,
+        }}
+      >
+        <Typography variant="h4" component="h1">
+          Device Dashboard
+        </Typography>
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <Chip
+            label={isConnected ? "Connected" : "Disconnected"}
+            color={isConnected ? "success" : "error"}
+            size="small"
+          />
+          {emqxConfigured && (
+            <Chip
+              label="EMQX API"
+              color="primary"
+              size="small"
+              variant="outlined"
             />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          )}
+          <Typography variant="body2" color="text.secondary">
+            {devicesWithStatus.length} devices total
+          </Typography>
+          {emqxConfigured && (
+            <Button
+              size="small"
+              startIcon={<RefreshIcon />}
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </Button>
+          )}
+        </Box>
+      </Box>
+
+      {!isConnected && !emqxConfigured && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Not connected to MQTT broker and EMQX API not configured. Please go to
+          Settings to configure and connect.
+        </Alert>
+      )}
+
+      {!isConnected && emqxConfigured && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Using EMQX API for device status. MQTT connection not available.
+        </Alert>
+      )}
+
+      {isConnected && !emqxConfigured && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Using MQTT for device status. Consider configuring EMQX API in
+          Settings for more reliable status updates.
+        </Alert>
+      )}
+
+      {devicesWithStatus.length === 0 && (
+        <Paper sx={{ p: 4, textAlign: "center" }}>
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No devices found
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {isConnected || emqxConfigured
+              ? "Devices will appear here when they connect and send their status information."
+              : "Please connect to MQTT broker or configure EMQX API and wait for devices to register."}
+          </Typography>
+        </Paper>
+      )}
+
+      {devicesWithStatus.length > 0 && (
+        <>
+          {onlineDevices.length > 0 && (
+            <Box sx={{ mb: 4 }}>
+              <Typography
+                variant="h5"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              >
+                Online Devices ({onlineDevices.length})
+                <Chip label="Online" color="success" size="small" />
+              </Typography>
+              <Grid container spacing={3}>
+                {onlineDevices.map((device) => (
+                  <Grid
+                    size={{ xs: 12, sm: 6, md: 4, lg: 3 }}
+                    key={device.device_id}
+                  >
+                    <DeviceCard device={device} />
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
+
+          {offlineDevices.length > 0 && (
+            <Box>
+              <Typography
+                variant="h5"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              >
+                Offline Devices ({offlineDevices.length})
+                <Chip label="Offline" color="error" size="small" />
+              </Typography>
+              <Grid container spacing={3}>
+                {offlineDevices.map((device) => (
+                  <Grid
+                    size={{ xs: 12, sm: 6, md: 4, lg: 3 }}
+                    key={device.device_id}
+                  >
+                    <DeviceCard device={device} />
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
+        </>
+      )}
+    </Box>
   );
 }
