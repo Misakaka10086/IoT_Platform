@@ -12,14 +12,9 @@ import {
   Grid,
   Switch,
   FormControlLabel,
-  Divider,
   CircularProgress,
 } from "@mui/material";
-import {
-  Save as SaveIcon,
-  Wifi as WifiIcon,
-  Api as ApiIcon,
-} from "@mui/icons-material";
+import { Save as SaveIcon, Wifi as WifiIcon } from "@mui/icons-material";
 import { mqttService, MqttConfig } from "../services/mqttService";
 
 export default function SettingsPage() {
@@ -36,7 +31,6 @@ export default function SettingsPage() {
 
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isTestingApi, setIsTestingApi] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -102,41 +96,6 @@ export default function SettingsPage() {
     setSuccess("🔌 Disconnected from MQTT broker");
   };
 
-  const handleTestApiConnection = async () => {
-    if (!config.host) {
-      setError("Please configure MQTT host first");
-      return;
-    }
-
-    setIsTestingApi(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      // Initialize device status service with MQTT host only
-      const { deviceStatusService } = await import(
-        "../services/deviceStatusService"
-      );
-      deviceStatusService.initEmqxApi(config.host);
-
-      const isConnected = await deviceStatusService.testEmqxConnection();
-
-      if (isConnected) {
-        setSuccess("✅ EMQX API connection successful!");
-      } else {
-        setError(
-          "❌ EMQX API connection failed. Please check your environment variables."
-        );
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      setError(`❌ EMQX API test failed: ${errorMessage}`);
-    } finally {
-      setIsTestingApi(false);
-    }
-  };
-
   return (
     <Box sx={{ maxWidth: 800, mx: "auto" }}>
       <Typography variant="h4" component="h1" gutterBottom>
@@ -161,6 +120,14 @@ export default function SettingsPage() {
             <WifiIcon sx={{ mr: 1 }} />
             <Typography variant="h6">MQTT Configuration</Typography>
           </Box>
+
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              Configure MQTT connection for device communication. Device status
+              updates are now handled via EMQX WebHook and Server-Sent Events
+              for real-time updates.
+            </Typography>
+          </Alert>
 
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -299,49 +266,28 @@ export default function SettingsPage() {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-            <ApiIcon sx={{ mr: 1 }} />
-            <Typography variant="h6">EMQX API Configuration</Typography>
+            <WifiIcon sx={{ mr: 1 }} />
+            <Typography variant="h6">Real-time Status Updates</Typography>
           </Box>
 
-          <Alert severity="info" sx={{ mb: 2 }}>
+          <Alert severity="success" sx={{ mb: 2 }}>
             <Typography variant="body2">
-              EMQX API credentials are configured via environment variables:
-              <br />
-              <code>EMQX_API_KEY</code> and <code>EMQX_SECRET_KEY</code>
+              Device status updates are now handled via EMQX WebHook and
+              Server-Sent Events for real-time updates. No additional
+              configuration required - the system automatically receives device
+              connection/disconnection events.
             </Typography>
           </Alert>
 
-          <Box sx={{ mt: 2 }}>
-            <Button
-              variant="contained"
-              onClick={handleTestApiConnection}
-              disabled={isTestingApi || !config.host}
-              startIcon={
-                isTestingApi ? <CircularProgress size={16} /> : <ApiIcon />
-              }
-            >
-              {isTestingApi ? "Testing..." : "Test API Connection"}
-            </Button>
-          </Box>
-
-          <Box sx={{ mt: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={
-                    !!process.env.EMQX_API_KEY && !!process.env.EMQX_SECRET_KEY
-                  }
-                  disabled
-                  color="success"
-                />
-              }
-              label={`API Configuration: ${
-                process.env.EMQX_API_KEY && process.env.EMQX_SECRET_KEY
-                  ? "Configured"
-                  : "Not Configured"
-              }`}
-            />
-          </Box>
+          <Typography variant="body2" color="text.secondary">
+            To enable WebHook functionality, configure EMQX to send events to:
+            <br />
+            <code>https://your-domain.vercel.app/api/emqx/webhook</code>
+            <br />
+            <br />
+            Events to configure: <code>client.connected</code> and{" "}
+            <code>client.disconnected</code>
+          </Typography>
         </CardContent>
       </Card>
     </Box>

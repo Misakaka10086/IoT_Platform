@@ -9,22 +9,18 @@ import {
   Paper,
   Chip,
   CircularProgress,
-  Button,
 } from "@mui/material";
-import { Refresh as RefreshIcon } from "@mui/icons-material";
 import { DeviceCard } from "./components/DeviceCard";
 import { mqttService } from "./services/mqttService";
-import { deviceStatusService } from "./services/deviceStatusService";
+import { deviceStatusClientService } from "./services/deviceStatusClientService";
 import { Device, DeviceStatus } from "../types/device";
-import { emqxApiService } from "./services/emqxApiService";
 
 export default function Home() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [deviceStatuses, setDeviceStatuses] = useState<DeviceStatus[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [sseConnected, setSseConnected] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [emqxConfigured, setEmqxConfigured] = useState(false);
 
   useEffect(() => {
     // Load devices from database
@@ -44,39 +40,34 @@ export default function Home() {
 
     loadDevices();
 
-    // Subscribe to device status updates from MQTT and EMQX
-    const unsubscribeStatus = deviceStatusService.subscribe((statuses) => {
-      setDeviceStatuses(statuses);
-    });
+    // Connect to SSE stream for real-time device status updates
+    deviceStatusClientService.connect();
 
-    // Check connection status
+    // Subscribe to device status updates from SSE
+    const unsubscribeStatus = deviceStatusClientService.subscribe(
+      (statuses) => {
+        setDeviceStatuses(statuses);
+      }
+    );
+
+    // Check MQTT connection status
     setIsConnected(mqttService.isConnected());
 
-    // Check EMQX configuration and initialize
-    const checkEmqxConfig = () => {
-      const savedMqttConfig = localStorage.getItem("mqttConfig");
-
-      if (savedMqttConfig) {
-        try {
-          const mqttConfig = JSON.parse(savedMqttConfig);
-
-          if (mqttConfig.host) {
-            console.log("🔗 Initializing EMQX API with host:", mqttConfig.host);
-            deviceStatusService.initEmqxApi(mqttConfig.host);
-            setEmqxConfigured(true);
-          }
-        } catch (error) {
-          console.error("Error loading MQTT config:", error);
-        }
-      }
+    // Monitor SSE connection status
+    const checkSseConnection = () => {
+      setSseConnected(deviceStatusClientService.isConnected());
     };
 
-    checkEmqxConfig();
+    const sseConnectionInterval = setInterval(checkSseConnection, 2000);
 
-    return unsubscribeStatus;
+    return () => {
+      unsubscribeStatus();
+      clearInterval(sseConnectionInterval);
+      deviceStatusClientService.disconnect();
+    };
   }, []);
 
-  // Combine database devices with MQTT/EMQX statuses
+  // Combine database devices with real-time statuses
   const devicesWithStatus = devices.map((device) => {
     const status = deviceStatuses.find((s) => s.device_id === device.device_id);
     return {
@@ -93,17 +84,6 @@ export default function Home() {
   const offlineDevices = devicesWithStatus.filter(
     (device) => device.status === "offline"
   );
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await deviceStatusService.refreshFromEmqx();
-    } catch (error) {
-      console.error("Error refreshing device statuses:", error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -135,51 +115,38 @@ export default function Home() {
         </Typography>
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
           <Chip
-            label={isConnected ? "Connected" : "Disconnected"}
+            label={isConnected ? "MQTT Connected" : "MQTT Disconnected"}
             color={isConnected ? "success" : "error"}
             size="small"
           />
-          {emqxConfigured && (
-            <Chip
-              label="EMQX API"
-              color="primary"
-              size="small"
-              variant="outlined"
-            />
-          )}
+          <Chip
+            label={sseConnected ? "SSE Connected" : "SSE Disconnected"}
+            color={sseConnected ? "success" : "error"}
+            size="small"
+          />
           <Typography variant="body2" color="text.secondary">
             {devicesWithStatus.length} devices total
           </Typography>
-          {emqxConfigured && (
-            <Button
-              size="small"
-              startIcon={<RefreshIcon />}
-              onClick={handleRefresh}
-              disabled={refreshing}
-            >
-              {refreshing ? "Refreshing..." : "Refresh"}
-            </Button>
-          )}
         </Box>
       </Box>
 
-      {!isConnected && !emqxConfigured && (
+      {!isConnected && !sseConnected && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          Not connected to MQTT broker and EMQX API not configured. Please go to
-          Settings to configure and connect.
+          Not connected to MQTT broker and SSE stream not available. Please go
+          to Settings to configure MQTT connection.
         </Alert>
       )}
 
-      {!isConnected && emqxConfigured && (
+      {!isConnected && sseConnected && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          Using EMQX API for device status. MQTT connection not available.
+          Using real-time device status updates via Server-Sent Events. MQTT
+          connection not available.
         </Alert>
       )}
 
-      {isConnected && !emqxConfigured && (
+      {isConnected && !sseConnected && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          Using MQTT for device status. Consider configuring EMQX API in
-          Settings for more reliable status updates.
+          Using MQTT for device status. SSE stream not available.
         </Alert>
       )}
 
@@ -189,9 +156,9 @@ export default function Home() {
             No devices found
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {isConnected || emqxConfigured
+            {isConnected || sseConnected
               ? "Devices will appear here when they connect and send their status information."
-              : "Please connect to MQTT broker or configure EMQX API and wait for devices to register."}
+              : "Please connect to MQTT broker and wait for devices to register."}
           </Typography>
         </Paper>
       )}

@@ -1,5 +1,6 @@
 import { DeviceStatus } from '../../types/device';
-import { emqxApiService } from './emqxApiService';
+import { DeviceConnectionEvent } from '../../types/emqx-webhook';
+import { deviceStatusEventService } from './deviceStatusEventService';
 
 export interface MqttDeviceData {
     device_id: string;
@@ -10,114 +11,41 @@ export interface MqttDeviceData {
 }
 
 class DeviceStatusService {
-    private devices: Map<string, DeviceStatus> = new Map();
     private listeners: Set<(devices: DeviceStatus[]) => void> = new Set();
-    private emqxPollingInterval: NodeJS.Timeout | null = null;
-    private isEmqxEnabled: boolean = false;
 
-    // Initialize EMQX API service with MQTT host only
-    initEmqxApi(mqttHost: string) {
-        if (mqttHost) {
-            emqxApiService.init(mqttHost);
-            this.isEmqxEnabled = true;
-            this.startEmqxPolling();
-            console.log('🔄 EMQX API polling started for host:', mqttHost);
-        } else {
-            this.isEmqxEnabled = false;
-            this.stopEmqxPolling();
-            console.log('🔄 EMQX API polling stopped - no host provided');
-        }
-    }
-
-    // Start polling EMQX API for device statuses
-    private startEmqxPolling() {
-        if (this.emqxPollingInterval) {
-            clearInterval(this.emqxPollingInterval);
-        }
-
-        console.log('🔄 Starting EMQX API polling...');
-
-        // Poll every 10 seconds
-        this.emqxPollingInterval = setInterval(async () => {
-            if (this.isEmqxEnabled) {
-                try {
-                    console.log('🔄 EMQX API polling cycle started...');
-                    const emqxStatuses = await emqxApiService.getDeviceStatuses();
-
-                    // Clear existing statuses and update with EMQX data
-                    // This ensures that devices that are no longer connected are removed
-                    this.devices.clear();
-
-                    // Update device statuses from EMQX
-                    emqxStatuses.forEach(status => {
-                        this.devices.set(status.device_id, status);
-                    });
-
-                    console.log(`🔄 EMQX polling: ${emqxStatuses.length} devices online`);
-                    this.notifyListeners();
-                } catch (error) {
-                    console.error('Error polling EMQX API:', error);
-                }
-            }
-        }, 10000);
-
-        console.log('🔄 EMQX API polling interval set to 10 seconds');
-    }
-
-    // Stop EMQX polling
-    private stopEmqxPolling() {
-        if (this.emqxPollingInterval) {
-            clearInterval(this.emqxPollingInterval);
-            this.emqxPollingInterval = null;
-            console.log('🔄 EMQX API polling stopped');
-        }
-    }
-
-    // Update device status from MQTT message
-    updateDeviceStatus(mqttData: MqttDeviceData): void {
-        const deviceStatus: DeviceStatus = {
-            device_id: mqttData.device_id,
-            status: mqttData.status === 'Online' ? 'online' : 'offline',
-            last_seen: mqttData.timestamp || new Date().toISOString(),
-            data: mqttData.data
-        };
-
-        console.log('🔄 Updating device status from MQTT:', deviceStatus);
-        this.devices.set(mqttData.device_id, deviceStatus);
+    // Update device status from WebHook event
+    updateDeviceStatusFromWebhook(event: DeviceConnectionEvent): void {
+        console.log('🔄 Processing WebHook event:', event);
+        deviceStatusEventService.updateDeviceStatusFromWebhook(event);
         this.notifyListeners();
     }
 
-    // Update device status from EMQX API
-    async updateDeviceStatusFromEmqx(deviceId: string): Promise<void> {
-        if (!this.isEmqxEnabled) return;
-
-        try {
-            const status = await emqxApiService.getDeviceStatus(deviceId);
-            if (status) {
-                console.log('🔄 Updating device status from EMQX API:', status);
-                this.devices.set(deviceId, status);
-                this.notifyListeners();
-            }
-        } catch (error) {
-            console.error('Error updating device status from EMQX:', error);
-        }
+    // Update device status from MQTT message (for backward compatibility)
+    updateDeviceStatus(mqttData: MqttDeviceData): void {
+        console.log('🔄 Processing MQTT device data:', mqttData);
+        deviceStatusEventService.updateDeviceStatusFromMqtt(
+            mqttData.device_id,
+            mqttData.status === 'Online' ? 'online' : 'offline',
+            mqttData.data
+        );
+        this.notifyListeners();
     }
 
     // Get device status by ID
     getDeviceStatus(deviceId: string): DeviceStatus | undefined {
-        return this.devices.get(deviceId);
+        return deviceStatusEventService.getDeviceStatus(deviceId);
     }
 
     // Get all device statuses
     getAllDeviceStatuses(): DeviceStatus[] {
-        return Array.from(this.devices.values());
+        return deviceStatusEventService.getAllDeviceStatuses();
     }
 
     // Subscribe to device status changes
     subscribe(callback: (devices: DeviceStatus[]) => void): () => void {
         this.listeners.add(callback);
         // Immediately call with current devices
-        callback(Array.from(this.devices.values()));
+        callback(deviceStatusEventService.getAllDeviceStatuses());
 
         // Return unsubscribe function
         return () => {
@@ -126,49 +54,20 @@ class DeviceStatusService {
     }
 
     private notifyListeners(): void {
-        const devicesArray = Array.from(this.devices.values());
+        const devicesArray = deviceStatusEventService.getAllDeviceStatuses();
         console.log('📢 Notifying device status listeners with devices:', devicesArray.length);
         this.listeners.forEach(listener => listener(devicesArray));
     }
 
     // Clear all devices (useful for disconnection)
     clear(): void {
-        this.devices.clear();
+        deviceStatusEventService.clear();
         this.notifyListeners();
     }
 
-    // Test EMQX API connection
-    async testEmqxConnection(): Promise<boolean> {
-        if (!this.isEmqxEnabled) {
-            return false;
-        }
-        return await emqxApiService.testConnection();
-    }
-
-    // Get EMQX configuration status
-    isEmqxConfigured(): boolean {
-        return this.isEmqxEnabled;
-    }
-
-    // Manual refresh from EMQX API
-    async refreshFromEmqx(): Promise<void> {
-        if (!this.isEmqxEnabled) return;
-
-        try {
-            console.log('🔄 Manual refresh from EMQX API started...');
-            const emqxStatuses = await emqxApiService.getDeviceStatuses();
-
-            // Clear existing statuses and update with EMQX data
-            this.devices.clear();
-            emqxStatuses.forEach(status => {
-                this.devices.set(status.device_id, status);
-            });
-
-            console.log(`✅ Manual refresh: ${emqxStatuses.length} devices online`);
-            this.notifyListeners();
-        } catch (error) {
-            console.error('Error refreshing from EMQX API:', error);
-        }
+    // Get connected SSE clients count
+    getConnectedClientsCount(): number {
+        return deviceStatusEventService.getConnectedClientsCount();
     }
 }
 
