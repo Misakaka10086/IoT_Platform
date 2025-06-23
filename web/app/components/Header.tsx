@@ -15,7 +15,7 @@ import {
   Home as HomeIcon,
   Settings as SettingsIcon,
   PlayArrow as TestIcon,
-  Memory as ProfilesIcon,
+  ManageAccounts as ManagementIcon,
   Brightness4,
   Brightness7,
 } from "@mui/icons-material";
@@ -78,18 +78,18 @@ export const Header: React.FC = () => {
           </Button>
           <Button
             component={Link}
-            href="/profiles"
+            href="/management"
             color="inherit"
-            startIcon={<ProfilesIcon />}
-            variant={pathname === "/profiles" ? "contained" : "text"}
+            startIcon={<ManagementIcon />}
+            variant={pathname === "/management" ? "contained" : "text"}
             sx={{
               backgroundColor:
-                pathname === "/profiles"
+                pathname === "/management"
                   ? "rgba(255, 255, 255, 0.1)"
                   : "transparent",
             }}
           >
-            Profiles
+            Management
           </Button>
           <IconButton color="inherit" onClick={toggleTheme} sx={{ ml: 1 }}>
             {themeMode === "dark" ? <Brightness7 /> : <Brightness4 />}

@@ -15,7 +15,11 @@ export async function GET(request: NextRequest) {
         const devices = await DeviceService.getAllDevices();
         console.log(`✅ Successfully fetched ${devices.length} devices`);
 
-        return NextResponse.json(devices);
+        return NextResponse.json({
+            success: true,
+            devices: devices,
+            timestamp: new Date().toISOString()
+        });
     } catch (error) {
         console.error('❌ Error fetching devices:', error);
 
