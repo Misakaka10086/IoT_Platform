@@ -13,7 +13,8 @@ const pool = new Pool({
     // Connection pool settings
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 3000, // 连接超时设置为3秒
+    statement_timeout: 3000, // 查询超时设置为3秒
 });
 
 // Test database connection
@@ -25,5 +26,36 @@ pool.on('error', (err) => {
     console.error('❌ Unexpected error on idle client', err);
     // Don't exit the process, just log the error
 });
+
+// 重试工具函数
+export async function withRetry<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    operationName: string = 'Database operation'
+): Promise<T> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await operation();
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+
+            // 如果是最后一次尝试，直接抛出错误
+            if (attempt === maxRetries) {
+                console.error(`❌ ${operationName} failed after ${maxRetries} attempts:`, lastError);
+                throw lastError;
+            }
+
+            // 计算延迟时间（指数退避）
+            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+            console.warn(`⚠️ ${operationName} attempt ${attempt}/${maxRetries} failed, retrying in ${delay}ms:`, lastError.message);
+
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+
+    throw lastError!;
+}
 
 export default pool; 

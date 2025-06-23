@@ -18,6 +18,7 @@ export function useDeviceStatus(): UseDeviceStatusReturn {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [pusherConnected, setPusherConnected] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
 
     // Initialize Pusher client
     useEffect(() => {
@@ -93,15 +94,19 @@ export function useDeviceStatus(): UseDeviceStatusReturn {
                         }
                     );
 
+                    setIsInitialized(true);
+
                     // Return cleanup function
                     return () => clearInterval(interval);
                 } else {
                     console.error('❌ Failed to get Pusher config:', data.error);
                     setError('Failed to initialize real-time connection');
+                    setIsInitialized(true);
                 }
             } catch (err) {
                 console.error('❌ Error initializing Pusher:', err);
                 setError('Failed to initialize real-time connection');
+                setIsInitialized(true);
             }
         };
 
@@ -110,7 +115,7 @@ export function useDeviceStatus(): UseDeviceStatusReturn {
         // Cleanup on unmount
         return () => {
             cleanup?.then(clearInterval => clearInterval?.());
-            pusherClientService.disconnect();
+            // 不要在这里调用 disconnect，让连接保持活跃
         };
     }, []);
 
@@ -136,10 +141,12 @@ export function useDeviceStatus(): UseDeviceStatusReturn {
         }
     }, []);
 
-    // Initial fetch
+    // Initial fetch - 等待 Pusher 初始化完成后再获取数据
     useEffect(() => {
-        fetchDevices();
-    }, [fetchDevices]);
+        if (isInitialized) {
+            fetchDevices();
+        }
+    }, [isInitialized, fetchDevices]);
 
     // Update device status
     const updateDeviceStatus = useCallback(async (deviceId: string, status: 'online' | 'offline') => {
