@@ -4,12 +4,12 @@
 
 ## 特性
 
-- **实时设备状态监控** - 基于 EMQX WebHook 和 Server-Sent Events 的实时状态更新
+- **实时设备状态监控** - 基于 EMQX WebHook 和 Pusher 的实时状态更新
 - **设备注册管理** - PostgreSQL 数据库支持设备注册和配置管理
 - **现代化 UI** - 基于 Material-UI 的响应式设计，支持明暗主题切换
-- **MQTT 集成** - 完整的 MQTT 连接管理，支持 WebSocket 传输
-- **实时推送** - 无需轮询，设备状态变更立即推送到前端
-- **自动重连** - SSE 连接自动重连机制，确保连接稳定性
+- **实时推送** - 基于 Pusher 的实时事件推送，无需轮询
+- **自动重连** - Pusher 客户端自动重连机制，确保连接稳定性
+- **状态持久化** - 设备状态存储在 PostgreSQL 数据库中
 
 ## 架构概览
 
@@ -26,32 +26,39 @@ graph TB
     
     subgraph "Backend (Next.js)"
         WebHookAPI["/api/emqx/webhook"]
-        EventService[Device Status Event Service]
-        SSEAPI["/api/device-status-stream"]
+        DatabaseService[Database Service]
+        PusherService[Pusher Service]
         DB[(PostgreSQL Database)]
+    end
+    
+    subgraph "Pusher Cloud"
+        Pusher[Pusher Real-time Service]
     end
     
     subgraph "Frontend (React)"
         ReactApp[React Application]
+        PusherClient[Pusher Client]
         DeviceCards[Device Cards]
         StatusDisplay[Status Display]
     end
     
     ESP32 -->|MQTT Connect/Disconnect| EMQX
     EMQX -->|WebHook Events| WebHookAPI
-    WebHookAPI -->|Process Events| EventService
-    EventService -->|Broadcast Updates| SSEAPI
-    SSEAPI -->|SSE Stream| ReactApp
+    WebHookAPI -->|Update Database| DatabaseService
+    WebHookAPI -->|Trigger Events| PusherService
+    DatabaseService -->|Store/Retrieve| DB
+    PusherService -->|Send Events| Pusher
+    Pusher -->|Real-time Updates| PusherClient
+    PusherClient -->|Update UI| ReactApp
     ReactApp -->|Display| DeviceCards
     ReactApp -->|Show Status| StatusDisplay
-    
-    EventService -->|Store/Retrieve| DB
     
     style ESP32 fill:#e1f5fe
     style EMQX fill:#f3e5f5
     style WebHookAPI fill:#e8f5e8
-    style EventService fill:#fff3e0
-    style SSEAPI fill:#fce4ec
+    style DatabaseService fill:#fff3e0
+    style PusherService fill:#fce4ec
+    style Pusher fill:#e3f2fd
     style ReactApp fill:#f1f8e9
 ```
 
@@ -61,18 +68,19 @@ graph TB
 - **Next.js 15** - React 框架，使用 App Router
 - **Material-UI (MUI)** - UI 组件库
 - **TypeScript** - 类型安全
-- **Server-Sent Events (SSE)** - 实时数据推送
+- **Pusher-js** - 实时通信客户端
 
 ### 后端
 - **Next.js API Routes** - 后端 API
 - **PostgreSQL** - 数据库
 - **pg** - PostgreSQL 客户端
+- **Pusher** - 实时通信服务
 - **EMQX WebHook** - 设备事件接收
 
 ### 通信
 - **MQTT** - 设备通信协议
-- **WebSocket** - MQTT 传输层（浏览器端）
 - **WebHook** - EMQX 事件推送
+- **Pusher** - 实时事件推送
 
 ## 快速开始
 
@@ -81,6 +89,7 @@ graph TB
 - Node.js 18+
 - PostgreSQL 12+
 - EMQX 5.0+
+- Pusher 账户
 
 ### 安装依赖
 
@@ -94,17 +103,32 @@ npm install
 
 ```env
 # Database Configuration
-DATABASE_URL=postgresql://username:password@localhost:5432/iot_platform
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=neondb
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
 
-# EMQX API Configuration (Optional)
-EMQX_API_KEY=your_emqx_api_key
-EMQX_SECRET_KEY=your_emqx_secret_key
+# Pusher Configuration
+PUSHER_APP_ID=your_app_id
+PUSHER_KEY=your_key
+PUSHER_SECRET=your_secret
+PUSHER_CLUSTER=your_cluster
+
+# EMQX Configuration (for WebHook)
+EMQX_WEBHOOK_SECRET=your_webhook_secret
 ```
 
 ### 数据库设置
 
 1. 创建 PostgreSQL 数据库
 2. 运行数据库迁移（参考 `DATABASE_SETUP.md`）
+
+### Pusher 设置
+
+1. 注册 Pusher 账户
+2. 创建新应用
+3. 获取配置信息（参考 `PUSHER_SETUP.md`）
 
 ### 启动开发服务器
 
@@ -123,8 +147,8 @@ sequenceDiagram
     participant ESP32 as ESP32 Device
     participant EMQX as EMQX Broker
     participant WebHook as WebHook API
-    participant EventService as Event Service
-    participant SSE as SSE Stream
+    participant Database as Database Service
+    participant Pusher as Pusher Service
     participant Frontend as Frontend (React)
 
     ESP32->>EMQX: Connect (clientid: ESP32-1814AE9E9EF0)
@@ -132,14 +156,13 @@ sequenceDiagram
     EMQX->>WebHook: POST /api/emqx/webhook
     Note over WebHook: Event data: {event: "client.connected", clientid: "ESP32-1814AE9E9EF0", ...}
     
-    WebHook->>EventService: updateDeviceStatusFromWebhook()
-    EventService->>EventService: Extract device_id: "1814AE9E9EF0"
-    EventService->>EventService: Create DeviceStatus: {device_id: "1814AE9E9EF0", status: "online", ...}
-    EventService->>SSE: Broadcast to all connected clients
+    WebHook->>Database: updateDeviceStatus()
+    Database->>Database: Update device status to "online"
     
-    loop For each connected SSE client
-        SSE->>Frontend: data: {"type": "device_update", "device": {...}}
-    end
+    WebHook->>Pusher: triggerDeviceConnected()
+    WebHook->>Pusher: triggerDeviceStatusUpdate()
+    Pusher->>Frontend: Real-time event: device connected
+    Pusher->>Frontend: Real-time event: status update
     
     Frontend->>Frontend: Update device card status
     Frontend->>Frontend: Show device as "Online"
@@ -152,8 +175,8 @@ sequenceDiagram
     participant ESP32 as ESP32 Device
     participant EMQX as EMQX Broker
     participant WebHook as WebHook API
-    participant EventService as Event Service
-    participant SSE as SSE Stream
+    participant Database as Database Service
+    participant Pusher as Pusher Service
     participant Frontend as Frontend (React)
 
     ESP32->>EMQX: Disconnect (keepalive timeout)
@@ -161,40 +184,43 @@ sequenceDiagram
     EMQX->>WebHook: POST /api/emqx/webhook
     Note over WebHook: Event data: {event: "client.disconnected", clientid: "ESP32-1814AE9E9EF0", reason: "keepalive_timeout", ...}
     
-    WebHook->>EventService: updateDeviceStatusFromWebhook()
-    EventService->>EventService: Extract device_id: "1814AE9E9EF0"
-    EventService->>EventService: Create DeviceStatus: {device_id: "1814AE9E9EF0", status: "offline", reason: "keepalive_timeout", ...}
-    EventService->>SSE: Broadcast to all connected clients
+    WebHook->>Database: updateDeviceStatus()
+    Database->>Database: Update device status to "offline"
     
-    loop For each connected SSE client
-        SSE->>Frontend: data: {"type": "device_update", "device": {...}}
-    end
+    WebHook->>Pusher: triggerDeviceDisconnected()
+    WebHook->>Pusher: triggerDeviceStatusUpdate()
+    Pusher->>Frontend: Real-time event: device disconnected
+    Pusher->>Frontend: Real-time event: status update
     
     Frontend->>Frontend: Update device card status
     Frontend->>Frontend: Show device as "Offline"
 ```
-### 前端 SSE 连接流程
+
+### 前端 Pusher 连接流程
+
 ```mermaid
 sequenceDiagram
     participant Frontend as Frontend (React)
-    participant SSE as SSE Stream API
-    participant EventService as Event Service
+    participant ConfigAPI as Config API
+    participant PusherClient as Pusher Client
+    participant Pusher as Pusher Service
 
-    Frontend->>SSE: GET /api/device-status-stream
-    SSE->>EventService: addClient()
-    EventService->>EventService: Create new SSE client
-    EventService->>SSE: Send initial device statuses
+    Frontend->>ConfigAPI: GET /api/pusher/config
+    ConfigAPI->>Frontend: Pusher configuration
     
-    SSE->>Frontend: data: {"type": "initial", "devices": [...]}
-    Frontend->>Frontend: Display current device statuses
+    Frontend->>PusherClient: initialize(config)
+    PusherClient->>Pusher: Connect to Pusher
+    
+    PusherClient->>PusherClient: Subscribe to device-status channel
+    PusherClient->>PusherClient: Subscribe to device-events channel
     
     loop Real-time updates
-        EventService->>SSE: Broadcast device update
-        SSE->>Frontend: data: {"type": "device_update", "device": {...}}
+        Pusher->>PusherClient: Device status update event
+        PusherClient->>Frontend: Update device status
         Frontend->>Frontend: Update UI in real-time
     end
     
-    Note over Frontend,SSE: Connection maintained with auto-reconnect
+    Note over Frontend,Pusher: Connection maintained with auto-reconnect
 ```
 
 ## EMQX 配置
@@ -363,7 +389,7 @@ EMQX_SECRET_KEY=your_emqx_secret_key
 }
 ```
 
-## ��️ 开发
+## 🔍 开发
 
 ### 添加新功能
 
@@ -393,7 +419,7 @@ python3 test_webhook.py
 
 欢迎提交 Issue 和 Pull Request！
 
-## �� 许可证
+## 📄 许可证
 
 MIT License
 

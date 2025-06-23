@@ -10,16 +10,24 @@ import {
   Box,
   useTheme as useMuiTheme,
   Chip,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
-import { Memory as ChipIcon, Schedule as TimeIcon } from "@mui/icons-material";
+import {
+  Memory as ChipIcon,
+  Schedule as TimeIcon,
+  PowerSettingsNew as PowerIcon,
+  PowerOff as PowerOffIcon,
+} from "@mui/icons-material";
 import { keyframes } from "@emotion/react";
-import { Device } from "../../types/device";
+import { DeviceStatus } from "../../types/device";
 
 interface DeviceCardProps {
-  device: Device & {
-    status: "online" | "offline";
-    data?: Record<string, any>;
-  };
+  device: DeviceStatus;
+  onStatusUpdate?: (
+    deviceId: string,
+    status: "online" | "offline"
+  ) => Promise<void>;
 }
 
 const pulse = keyframes`
@@ -34,13 +42,23 @@ const pulse = keyframes`
   }
 `;
 
-export const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
+export const DeviceCard: React.FC<DeviceCardProps> = ({
+  device,
+  onStatusUpdate,
+}) => {
   const muiTheme = useMuiTheme();
   const isOnline = device.status === "online";
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Never";
     return new Date(dateString).toLocaleString();
+  };
+
+  const handleStatusToggle = async () => {
+    if (onStatusUpdate) {
+      const newStatus = isOnline ? "offline" : "online";
+      await onStatusUpdate(device.device_id, newStatus);
+    }
   };
 
   return (
@@ -96,6 +114,17 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
                   animation: isOnline ? `${pulse} 2s infinite` : "none",
                 }}
               />
+              {onStatusUpdate && (
+                <Tooltip title={`Mark as ${isOnline ? "offline" : "online"}`}>
+                  <IconButton
+                    size="small"
+                    onClick={handleStatusToggle}
+                    color={isOnline ? "error" : "success"}
+                  >
+                    {isOnline ? <PowerOffIcon /> : <PowerIcon />}
+                  </IconButton>
+                </Tooltip>
+              )}
             </Box>
           </Box>
           <Divider />
@@ -103,7 +132,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               <ChipIcon sx={{ color: "text.secondary" }} />
               <Typography variant="body2" color="text.secondary">
-                Chip: <strong>{device.chip}</strong>
+                Chip: <strong>{device.data?.chip || "Unknown"}</strong>
               </Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
@@ -112,9 +141,9 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
                 Last Seen: <strong>{formatDate(device.last_seen)}</strong>
               </Typography>
             </Box>
-            {device.description && (
+            {device.data?.description && (
               <Typography variant="body2" color="text.secondary">
-                {device.description}
+                {device.data.description}
               </Typography>
             )}
             {device.data && Object.keys(device.data).length > 0 && (
@@ -127,15 +156,17 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
                   Sensor Data:
                 </Typography>
                 <Box sx={{ mt: 0.5 }}>
-                  {Object.entries(device.data).map(([key, value]) => (
-                    <Chip
-                      key={key}
-                      label={`${key}: ${value}`}
-                      size="small"
-                      variant="outlined"
-                      sx={{ mr: 0.5, mb: 0.5 }}
-                    />
-                  ))}
+                  {Object.entries(device.data)
+                    .filter(([key]) => !["chip", "description"].includes(key))
+                    .map(([key, value]) => (
+                      <Chip
+                        key={key}
+                        label={`${key}: ${value}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ mr: 0.5, mb: 0.5 }}
+                      />
+                    ))}
                 </Box>
               </Box>
             )}

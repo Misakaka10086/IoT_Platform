@@ -30,6 +30,7 @@ CREATE TABLE devices (
   chip TEXT NOT NULL,                      -- 设备型号
   registered_at TIMESTAMPTZ DEFAULT now(),  -- 注册时间
   last_seen TIMESTAMPTZ,                    -- 最近上线时间
+  online BOOLEAN DEFAULT FALSE,             -- 在线状态
   description TEXT                          -- 可选备注
 );
 
