@@ -223,6 +223,151 @@ sequenceDiagram
     Note over Frontend,Pusher: Connection maintained with auto-reconnect
 ```
 
+### 设备状态更新流程
+
+```mermaid
+sequenceDiagram
+    participant ESP32 as ESP32 Device
+    participant EMQX as EMQX Broker
+    participant WebHook as WebHook API
+    participant Database as Database Service
+    participant Pusher as Pusher Service
+    participant PusherCloud as Pusher Cloud
+    participant Client as Pusher Client
+    participant HomePage as Home Page
+    participant DeviceCard as Device Card
+
+    Note over ESP32,DeviceCard: 设备连接流程
+    ESP32->>EMQX: Connect (clientid: ESP32-1814AE9E9EF0)
+    EMQX->>EMQX: client.connected event triggered
+    EMQX->>WebHook: POST /api/emqx/webhook
+    Note over WebHook: Event data: {event: "client.connected", clientid: "ESP32-1814AE9E9EF0", ...}
+    
+    WebHook->>Database: updateDeviceStatus()
+    Database->>Database: UPDATE devices SET online=true, last_seen=NOW()
+    Database-->>WebHook: Database updated
+    
+    WebHook->>Pusher: triggerDeviceConnected()
+    WebHook->>Pusher: triggerDeviceStatusUpdate()
+    Pusher->>PusherCloud: Send events to Pusher
+    PusherCloud->>Client: Real-time events
+    Client->>HomePage: Device status update event
+    HomePage->>HomePage: Update devices state
+    HomePage->>DeviceCard: Re-render with new status
+    DeviceCard->>DeviceCard: Show "Online" status
+
+    Note over ESP32,DeviceCard: 设备断开流程
+    ESP32->>EMQX: Disconnect (keepalive timeout)
+    EMQX->>EMQX: client.disconnected event triggered
+    EMQX->>WebHook: POST /api/emqx/webhook
+    Note over WebHook: Event data: {event: "client.disconnected", clientid: "ESP32-1814AE9E9EF0", reason: "keepalive_timeout", ...}
+    
+    WebHook->>Database: updateDeviceStatus()
+    Database->>Database: UPDATE devices SET online=false, last_seen=NOW()
+    Database-->>WebHook: Database updated
+    
+    WebHook->>Pusher: triggerDeviceDisconnected()
+    WebHook->>Pusher: triggerDeviceStatusUpdate()
+    Pusher->>PusherCloud: Send events to Pusher
+    PusherCloud->>Client: Real-time events
+    Client->>HomePage: Device status update event
+    HomePage->>HomePage: Update devices state
+    HomePage->>DeviceCard: Re-render with new status
+    DeviceCard->>DeviceCard: Show "Offline" status
+
+    Note over ESP32,DeviceCard: 手动状态切换流程
+    DeviceCard->>HomePage: User clicks status toggle
+    HomePage->>HomePage: updateDeviceStatus(deviceId, newStatus)
+    HomePage->>Database: POST /api/devices/status
+    Database->>Database: UPDATE devices SET online=newStatus
+    Database-->>HomePage: Success response
+    HomePage->>HomePage: Update local state
+    HomePage->>DeviceCard: Re-render with new status
+```
+
+### 前端状态管理流程
+
+```mermaid
+flowchart TD
+    A[Home Page Load] --> B[useDeviceStatus Hook]
+    B --> C[Initialize Pusher Client]
+    C --> D[Fetch Initial Devices]
+    D --> E[Subscribe to Pusher Events]
+    
+    E --> F[Device Status Channel]
+    E --> G[Device Events Channel]
+    
+    F --> H[Status Update Event]
+    G --> I[Connection Event]
+    
+    H --> J[Update Device Status]
+    I --> J
+    
+    J --> K[Re-render Device Cards]
+    K --> L[Update UI State]
+    
+    M[User Manual Toggle] --> N[Call updateDeviceStatus]
+    N --> O[POST to API]
+    O --> P[Update Database]
+    P --> Q[Update Local State]
+    Q --> K
+    
+    L --> R[Device Card Shows New Status]
+```
+
+### 数据流架构
+
+```mermaid
+graph TB
+    subgraph "IoT Layer"
+        ESP32[ESP32 Device]
+    end
+    
+    subgraph "MQTT Layer"
+        EMQX[EMQX Broker]
+    end
+    
+    subgraph "Backend Layer"
+        WebHook[WebHook API]
+        Database[(PostgreSQL)]
+        PusherService[Pusher Service]
+    end
+    
+    subgraph "Real-time Layer"
+        PusherCloud[Pusher Cloud]
+    end
+    
+    subgraph "Frontend Layer"
+        PusherClient[Pusher Client]
+        HomePage[Home Page]
+        DeviceCard[Device Card]
+    end
+    
+    ESP32 -->|MQTT Connect/Disconnect| EMQX
+    EMQX -->|WebHook Events| WebHook
+    WebHook -->|Update| Database
+    WebHook -->|Trigger| PusherService
+    PusherService -->|Send Events| PusherCloud
+    PusherCloud -->|Real-time Updates| PusherClient
+    PusherClient -->|Update State| HomePage
+    HomePage -->|Re-render| DeviceCard
+    
+    DeviceCard -->|Manual Toggle| HomePage
+    HomePage -->|API Call| WebHook
+    WebHook -->|Update| Database
+    
+    style ESP32 fill:#e1f5fe
+    style EMQX fill:#f3e5f5
+    style WebHook fill:#e8f5e8
+    style Database fill:#fff3e0
+    style PusherService fill:#fce4ec
+    style PusherCloud fill:#e3f2fd
+    style PusherClient fill:#f1f8e9
+    style HomePage fill:#f9fbe7
+    style DeviceCard fill:#fff8e1
+
+```
+
 ## EMQX 配置
 
 ### WebHook 配置
