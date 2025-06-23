@@ -27,6 +27,15 @@ export async function POST(request: NextRequest) {
                 device_id: webhookEvent.clientid
             });
         }
+        //filter out events where the reason is 'discarded'
+        if ((webhookEvent as any).reason === 'discarded') {
+            console.log(`🗑️ Ignoring discarded event: ${webhookEvent.clientid}`);
+            return NextResponse.json({
+                success: true,
+                message: 'Discarded event ignored',
+                device_id: webhookEvent.clientid
+            });
+        }
 
         // Extract device ID from client ID (remove 'ESP32-' prefix)
         const deviceId = webhookEvent.clientid.replace('ESP32-', '');
