@@ -18,6 +18,15 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
+        // filter out non-IoT device
+        if (!webhookEvent.clientid.startsWith('ESP32-')) {
+            console.log(`📝 Ignoring non-IoT device: ${webhookEvent.clientid}`);
+            return NextResponse.json({
+                success: true,
+                message: 'Non-IoT device ignored',
+                device_id: webhookEvent.clientid
+            });
+        }
 
         // Extract device ID from client ID (remove 'ESP32-' prefix)
         const deviceId = webhookEvent.clientid.replace('ESP32-', '');
