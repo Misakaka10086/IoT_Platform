@@ -18,7 +18,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   CircularProgress,
   Tooltip,
 } from "@mui/material";
@@ -28,6 +27,7 @@ import {
   Add as AddIcon,
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
+import ProfileDialog from "./ProfileDialog";
 
 interface DeviceProfile {
   id: number;
@@ -42,8 +42,8 @@ export default function ProfilesTab() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<DeviceProfile | null>(
     null
   );
@@ -79,7 +79,8 @@ export default function ProfilesTab() {
       model: "",
       default_config: "{}",
     });
-    setAddDialogOpen(true);
+    setIsEditMode(false);
+    setProfileDialogOpen(true);
   };
 
   const handleEditProfile = (profile: DeviceProfile) => {
@@ -88,7 +89,8 @@ export default function ProfilesTab() {
       model: profile.model,
       default_config: JSON.stringify(profile.default_config, null, 2),
     });
-    setEditDialogOpen(true);
+    setIsEditMode(true);
+    setProfileDialogOpen(true);
   };
 
   const handleDeleteProfile = (profile: DeviceProfile) => {
@@ -106,11 +108,11 @@ export default function ProfilesTab() {
         return;
       }
 
-      const url = editDialogOpen
+      const url = isEditMode
         ? `/api/profiles/${selectedProfile?.model}`
         : "/api/profiles";
 
-      const method = editDialogOpen ? "PUT" : "POST";
+      const method = isEditMode ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
@@ -124,17 +126,15 @@ export default function ProfilesTab() {
       });
 
       if (response.ok) {
-        const action = editDialogOpen ? "updated" : "created";
+        const action = isEditMode ? "updated" : "created";
         setSuccess(`Profile ${action} successfully`);
-        setEditDialogOpen(false);
-        setAddDialogOpen(false);
+        setProfileDialogOpen(false);
         setSelectedProfile(null);
         loadProfiles();
       } else {
         const data = await response.json();
         setError(
-          data.error ||
-            `Failed to ${editDialogOpen ? "update" : "create"} profile`
+          data.error || `Failed to ${isEditMode ? "update" : "create"} profile`
         );
       }
     } catch (err) {
@@ -299,85 +299,16 @@ export default function ProfilesTab() {
         </TableContainer>
       )}
 
-      {/* Add Profile Dialog */}
-      <Dialog
-        open={addDialogOpen}
-        onClose={() => setAddDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Add New Profile</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Model Name"
-              value={formData.model}
-              onChange={(e) =>
-                setFormData({ ...formData, model: e.target.value })
-              }
-              placeholder="e.g., ESP32, ESP8266, Arduino"
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              multiline
-              rows={8}
-              label="Default Configuration (JSON)"
-              value={formData.default_config}
-              onChange={(e) =>
-                setFormData({ ...formData, default_config: e.target.value })
-              }
-              placeholder='{"wifi_ssid": "", "wifi_password": "", "mqtt_server": ""}'
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-          <Button onClick={saveProfile} variant="contained">
-            Create Profile
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Edit Profile Dialog */}
-      <Dialog
-        open={editDialogOpen}
-        onClose={() => setEditDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Edit Profile - {selectedProfile?.model}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Model Name"
-              value={formData.model}
-              onChange={(e) =>
-                setFormData({ ...formData, model: e.target.value })
-              }
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              multiline
-              rows={8}
-              label="Default Configuration (JSON)"
-              value={formData.default_config}
-              onChange={(e) =>
-                setFormData({ ...formData, default_config: e.target.value })
-              }
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button onClick={saveProfile} variant="contained">
-            Update Profile
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Profile Dialog for Add/Edit */}
+      <ProfileDialog
+        open={profileDialogOpen}
+        onClose={() => setProfileDialogOpen(false)}
+        onSave={saveProfile}
+        formData={formData}
+        setFormData={setFormData}
+        isEditMode={isEditMode}
+        profileModel={selectedProfile?.model}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog
