@@ -31,6 +31,7 @@ import {
   Settings as SettingsIcon,
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
+import ConfigurationDialog from "./ConfigurationDialog";
 
 interface Device {
   id: number;
@@ -42,24 +43,15 @@ interface Device {
   description: string | null;
 }
 
-interface DeviceConfig {
-  version: string;
-  config: Record<string, any>;
-}
-
 export default function DevicesTab() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [descriptionDialogOpen, setDescriptionDialogOpen] = useState(false);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-  const [deviceConfig, setDeviceConfig] = useState<DeviceConfig | null>(null);
-  const [configFormData, setConfigFormData] = useState({
-    config: "",
-  });
   const [descriptionFormData, setDescriptionFormData] = useState({
     description: "",
   });
@@ -114,62 +106,9 @@ export default function DevicesTab() {
     }
   };
 
-  const handleEditConfig = async (device: Device) => {
+  const handleEditConfig = (device: Device) => {
     setSelectedDevice(device);
-    try {
-      const response = await fetch(`/api/devices/${device.device_id}/config`);
-      if (response.ok) {
-        const data = await response.json();
-        setDeviceConfig(data.config);
-        setConfigFormData({
-          config: JSON.stringify(data.config.config, null, 2),
-        });
-        setConfigDialogOpen(true);
-      } else {
-        setError("Failed to load device configuration");
-      }
-    } catch (err) {
-      setError("Network error occurred");
-    }
-  };
-
-  const saveDeviceConfig = async () => {
-    if (!selectedDevice || !deviceConfig) return;
-
-    try {
-      let configObj;
-      try {
-        configObj = JSON.parse(configFormData.config);
-      } catch (e) {
-        setError("Invalid JSON format for configuration");
-        return;
-      }
-
-      const response = await fetch(
-        `/api/devices/${selectedDevice.device_id}/config`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            config: configObj,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        setSuccess("Device configuration updated successfully");
-        setConfigDialogOpen(false);
-        setSelectedDevice(null);
-        setDeviceConfig(null);
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to update device configuration");
-      }
-    } catch (err) {
-      setError("Network error occurred");
-    }
+    setConfigDialogOpen(true);
   };
 
   const handleEditDescription = (device: Device) => {
@@ -385,39 +324,15 @@ export default function DevicesTab() {
         </DialogActions>
       </Dialog>
 
-      {/* Configuration Edit Dialog */}
-      <Dialog
+      {/* Configuration Dialog */}
+      <ConfigurationDialog
         open={configDialogOpen}
         onClose={() => setConfigDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          Edit Configuration - {selectedDevice?.device_id}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Current Version: {deviceConfig?.version}
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={12}
-              label="Configuration (JSON)"
-              value={configFormData.config}
-              onChange={(e) => setConfigFormData({ config: e.target.value })}
-              sx={{ mt: 2 }}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfigDialogOpen(false)}>Cancel</Button>
-          <Button onClick={saveDeviceConfig} variant="contained">
-            Save Configuration
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSave={loadDevices}
+        device={selectedDevice}
+        onError={setError}
+        onSuccess={setSuccess}
+      />
 
       {/* Description Edit Dialog */}
       <Dialog

@@ -137,10 +137,17 @@ export class DeviceService {
                 // New device registration
                 await this.registerDevice(device_id, chip);
 
-                // Get default config for this chip
-                const profile = await this.getDeviceProfile(chip);
+                // 尝试获取设备 profile
+                let profile = await this.getDeviceProfile(chip);
+
+                // ⬇️ 如果找不到该 chip 的配置，则使用 "default"
                 if (!profile) {
-                    throw new Error(`No default configuration found for chip: ${chip}`);
+                    profile = await this.getDeviceProfile("default");
+                    console.log(`No default configuration found for chip: ${chip}, using "default" profile`);
+                }
+
+                if (!profile) {
+                    throw new Error(`No default configuration found for chip: ${chip} or fallback "default"`);
                 }
 
                 // Generate version and create config
