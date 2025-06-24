@@ -8,9 +8,9 @@ interface SetCurrentVersionRequestBody {
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { deviceId: string } }
+    { params }: { params: Promise<{ deviceId: string }> }
 ) {
-    const { deviceId } = params;
+    const { deviceId } = await params;
 
     console.log('🔄 PUT /api/devices/[deviceId]/config/set-current called:', {
         deviceId,
