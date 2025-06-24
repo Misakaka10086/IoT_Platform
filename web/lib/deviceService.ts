@@ -57,12 +57,13 @@ export class DeviceService {
     static async createConfigVersion(
         deviceId: string,
         version: string,
+        gitVersion: string,
         config: Record<string, any>
     ): Promise<ConfigVersion> {
         return withRetry(async () => {
             const result = await pool.query(
-                'INSERT INTO config_version (device_id, version, config) VALUES ($1, $2, $3) RETURNING *',
-                [deviceId, version, config]
+                'INSERT INTO config_version (device_id, version, git_version, config) VALUES ($1, $2, $3, $4) RETURNING *',
+                [deviceId, version, gitVersion, config]
             );
             return result.rows[0];
         }, 3, `Create config version for ${deviceId}`);
@@ -80,10 +81,10 @@ export class DeviceService {
     }
 
     // Get current device config
-    static async getCurrentDeviceConfig(deviceId: string): Promise<{ version: string; config: Record<string, any> } | null> {
+    static async getCurrentDeviceConfig(deviceId: string): Promise<{ version: string; git_version: string; config: Record<string, any> } | null> {
         return withRetry(async () => {
             const result = await pool.query(`
-          SELECT dc.version, cv.config 
+          SELECT dc.version, cv.git_version, cv.config 
           FROM device_configs dc 
           JOIN config_version cv ON dc.device_id = cv.device_id AND dc.version = cv.version 
           WHERE dc.device_id = $1
@@ -93,6 +94,7 @@ export class DeviceService {
 
             return {
                 version: result.rows[0].version,
+                git_version: result.rows[0].git_version,
                 config: result.rows[0].config
             };
         }, 3, `Get current device config for ${deviceId}`);
@@ -159,7 +161,7 @@ export class DeviceService {
 
                 // Generate version and create config
                 const version = this.generateVersion();
-                await this.createConfigVersion(device_id, version, profile.default_config);
+                await this.createConfigVersion(device_id, version, git_version, profile.default_config);
                 await this.createDeviceConfig(device_id, version);
 
                 return {

@@ -18,7 +18,7 @@ export async function GET(
             const client = await pool.connect();
             try {
                 const result = await client.query(`
-                    SELECT cv.version, cv.config, cv.created_at,
+                    SELECT cv.version, cv.git_version, cv.config, cv.created_at,
                            CASE WHEN dc.version = cv.version THEN true ELSE false END as is_current
                     FROM config_version cv
                     LEFT JOIN device_configs dc ON cv.device_id = dc.device_id AND cv.version = dc.version
@@ -28,6 +28,7 @@ export async function GET(
 
                 return result.rows.map(row => ({
                     version: row.version,
+                    git_version: row.git_version,
                     config: row.config,
                     created_at: row.created_at,
                     is_current: row.is_current

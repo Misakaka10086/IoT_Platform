@@ -59,6 +59,7 @@ CREATE TABLE config_version (
   id SERIAL PRIMARY KEY,
   device_id TEXT NOT NULL REFERENCES devices(device_id) ON DELETE CASCADE,
   version TEXT NOT NULL,                         -- 使用时间戳格式版本号
+  git_version VARCHAR(20) NOT NULL, 
   config JSONB NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE (device_id, version)

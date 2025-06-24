@@ -18,7 +18,7 @@ export async function GET(
             const client = await pool.connect();
             try {
                 const result = await client.query(`
-                    SELECT dc.version, cv.config 
+                    SELECT dc.version, cv.git_version, cv.config 
                     FROM device_configs dc 
                     JOIN config_version cv ON dc.device_id = cv.device_id AND dc.version = cv.version 
                     WHERE dc.device_id = $1
@@ -30,6 +30,7 @@ export async function GET(
 
                 return {
                     version: result.rows[0].version,
+                    git_version: result.rows[0].git_version,
                     config: result.rows[0].config
                 };
             } finally {
@@ -94,10 +95,22 @@ export async function PUT(
                 const now = new Date();
                 const version = now.toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', 'T');
 
+                // Get device's git_version
+                const deviceResult = await client.query(
+                    'SELECT git_version FROM devices WHERE device_id = $1',
+                    [deviceId]
+                );
+
+                if (deviceResult.rows.length === 0) {
+                    throw new Error('Device not found');
+                }
+
+                const gitVersion = deviceResult.rows[0].git_version;
+
                 // Create new config version
                 await client.query(
-                    'INSERT INTO config_version (device_id, version, config) VALUES ($1, $2, $3)',
-                    [deviceId, version, newConfig]
+                    'INSERT INTO config_version (device_id, version, git_version, config) VALUES ($1, $2, $3, $4)',
+                    [deviceId, version, gitVersion, newConfig]
                 );
 
                 // Update device config to use new version

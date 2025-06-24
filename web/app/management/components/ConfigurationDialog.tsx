@@ -17,6 +17,7 @@ import {
   CircularProgress,
   useTheme, // 引入 useTheme 以便在 Monaco Editor 中使用
 } from "@mui/material";
+import GitHubIcon from "@mui/icons-material/GitHub";
 import dynamic from "next/dynamic"; // 引入 dynamic
 
 // 动态导入 Monaco Editor 以获得更好的体验
@@ -55,11 +56,13 @@ interface Device {
 
 interface DeviceConfig {
   version: string;
+  git_version: string;
   config: Record<string, any>;
 }
 
 interface ConfigVersion {
   version: string;
+  git_version: string;
   config: Record<string, any>;
   created_at: string;
   is_current: boolean;
@@ -281,9 +284,12 @@ export default function ConfigurationDialog({
                     <Typography variant="body2">
                       {formatVersion(v.version)}
                     </Typography>
-                    {v.is_current && (
-                      <Chip label="Current" size="small" color="primary" />
-                    )}
+                    <Chip
+                      icon={<GitHubIcon />}
+                      label={v.git_version}
+                      size="small"
+                    />
+                    {v.is_current && <Chip label="Current" color="primary" />}
                   </Box>
                 </MenuItem>
               ))}

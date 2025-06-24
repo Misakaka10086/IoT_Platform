@@ -19,6 +19,7 @@ export interface ConfigVersion {
     id: number;
     device_id: string;
     version: string;
+    git_version: string;
     config: Record<string, any>;
     created_at: string;
 }
@@ -27,6 +28,7 @@ export interface DeviceConfig {
     id: number;
     device_id: string;
     version: string;
+    git_version: string;
     updated_at: string;
 }
 
