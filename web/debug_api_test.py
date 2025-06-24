@@ -138,7 +138,7 @@ def test_device_registration_with_debug():
     data = {
         "device_id": f"TEST_{datetime.now().strftime('%H%M%S')}",
         "chip": "ESP32-C3",
-        "version": "20250622T053340",
+        "git_version": "fd5ee45",
         "timestamp": datetime.now().isoformat(),
     }
 

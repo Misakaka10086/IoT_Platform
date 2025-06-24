@@ -27,12 +27,14 @@ NODE_ENV=development
 CREATE TABLE devices (
   id SERIAL PRIMARY KEY,
   device_id TEXT UNIQUE NOT NULL,           -- 设备唯一标识（如MAC或SN）
-  chip TEXT NOT NULL,                      -- 设备型号
+  chip TEXT NOT NULL,                       -- 设备型号
+  git_version VARCHAR(20) NOT NULL,         -- git版本号
   registered_at TIMESTAMPTZ DEFAULT now(),  -- 注册时间
   last_seen TIMESTAMPTZ,                    -- 最近上线时间
   online BOOLEAN DEFAULT FALSE,             -- 在线状态
   description TEXT                          -- 可选备注
 );
+
 
 -- 设备配置表
 CREATE TABLE device_configs (

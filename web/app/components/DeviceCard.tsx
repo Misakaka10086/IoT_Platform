@@ -18,6 +18,7 @@ import {
   Schedule as TimeIcon,
   PowerSettingsNew as PowerIcon,
   PowerOff as PowerOffIcon,
+  GitHub as GitHubIcon,
 } from "@mui/icons-material";
 import { keyframes } from "@emotion/react";
 import { DeviceStatus } from "../../types/device";
@@ -133,6 +134,12 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <ChipIcon sx={{ color: "text.secondary" }} />
               <Typography variant="body2" color="text.secondary">
                 Chip: <strong>{device.data?.chip || "Unknown"}</strong>
+              </Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <GitHubIcon sx={{ color: "text.secondary" }} />
+              <Typography variant="body2" color="text.secondary">
+                Git: <strong>{device.data?.git_version || "Unknown"}</strong>
               </Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>

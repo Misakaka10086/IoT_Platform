@@ -6,6 +6,7 @@ DeviceConfigManager::DeviceConfigManager()
       configLoaded(false), wifiConnected(false) {
   deviceId = getDeviceId();
   chipType = getChipType();
+  gitVersion = getGitVersion();
   wifiSsid = WIFI_SSID;
   wifiPassword = WIFI_PASSWORD;
 }
@@ -15,6 +16,7 @@ DeviceConfigManager::DeviceConfigManager(const String &host)
       configLoaded(false), wifiConnected(false) {
   deviceId = getDeviceId();
   chipType = getChipType();
+  gitVersion = getGitVersion();
   wifiSsid = WIFI_SSID;
   wifiPassword = WIFI_PASSWORD;
 }
@@ -24,6 +26,7 @@ DeviceConfigManager::DeviceConfigManager(const String &host, int port)
       configLoaded(false), wifiConnected(false) {
   deviceId = getDeviceId();
   chipType = getChipType();
+  gitVersion = getGitVersion();
   wifiSsid = WIFI_SSID;
   wifiPassword = WIFI_PASSWORD;
 }
@@ -35,6 +38,7 @@ DeviceConfigManager::DeviceConfigManager(const String &host, int port,
       wifiPassword(password), configLoaded(false), wifiConnected(false) {
   deviceId = getDeviceId();
   chipType = getChipType();
+  gitVersion = getGitVersion();
 }
 
 String DeviceConfigManager::getDeviceId() {
@@ -47,6 +51,14 @@ String DeviceConfigManager::getDeviceId() {
 }
 
 String DeviceConfigManager::getChipType() { return ESP.getChipModel(); }
+
+String DeviceConfigManager::getGitVersion() {
+#ifdef GIT_VERSION
+  return GIT_VERSION;
+#else
+  return "unknown";
+#endif
+}
 
 String DeviceConfigManager::buildServerUrl() {
   if (useCustomPort) {
@@ -110,7 +122,7 @@ bool DeviceConfigManager::loadDeviceConfig() {
   JsonDocument requestDoc;
   requestDoc["device_id"] = deviceId;
   requestDoc["chip"] = chipType;
-
+  requestDoc["git_version"] = gitVersion;
   String requestBody = requestDoc.as<String>();
   Serial.printf("[ConfigManager] Request body: %s\n", requestBody.c_str());
 
@@ -219,6 +231,7 @@ void DeviceConfigManager::printConfig() const {
   Serial.println("=== Device Configuration ===");
   Serial.printf("Device ID: %s\n", deviceId.c_str());
   Serial.printf("Chip Type: %s\n", chipType.c_str());
+  Serial.printf("Git Version: %s\n", gitVersion.c_str());
   Serial.printf("WiFi Connected: %s\n", wifiConnected ? "Yes" : "No");
   if (wifiConnected) {
     Serial.printf("WiFi IP: %s\n", WiFi.localIP().toString().c_str());

@@ -2,6 +2,7 @@ export interface Device {
     id: number;
     device_id: string;
     chip: string;
+    git_version: string;
     registered_at: string;
     last_seen: string | null;
     description: string | null;
@@ -32,6 +33,7 @@ export interface DeviceConfig {
 export interface DeviceRegistrationRequest {
     device_id: string;
     chip: string;
+    git_version: string;
 }
 
 export interface DeviceRegistrationResponse {

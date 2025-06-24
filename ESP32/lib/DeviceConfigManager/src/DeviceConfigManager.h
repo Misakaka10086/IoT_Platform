@@ -6,6 +6,8 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 
+
+
 class DeviceConfigManager {
 private:
   String serverHost;
@@ -13,6 +15,7 @@ private:
   bool useCustomPort;
   String deviceId;
   String chipType;
+  String gitVersion;
   String wifiSsid;
   String wifiPassword;
 
@@ -54,6 +57,7 @@ public:
   String getConfigVersion() const;
   String getDeviceId();
   String getChipType();
+  String getGitVersion();
   // Debug methods
   void printConfig() const;
 };

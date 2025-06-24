@@ -18,11 +18,11 @@ export async function POST(request: NextRequest) {
         console.log('📦 Request body:', body);
 
         // Validate request body
-        if (!body.device_id || !body.chip) {
+        if (!body.device_id || !body.chip || !body.git_version) {
             console.log('❌ Validation failed: missing required fields');
             return NextResponse.json(
                 {
-                    error: 'Missing required fields: device_id and chip',
+                    error: 'Missing required fields: device_id, chip, and git_version',
                     receivedData: body,
                     timestamp: new Date().toISOString(),
                     endpoint: '/api/devices/register'
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        console.log(`📱 Device registration request: ${body.device_id} (${body.chip})`);
+        console.log(`📱 Device registration request: ${body.device_id} (${body.chip}) - Git: ${body.git_version}`);
 
         // Handle device registration
         console.log('🔧 Processing device registration...');

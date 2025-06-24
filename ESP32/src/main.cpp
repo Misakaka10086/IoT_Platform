@@ -30,7 +30,7 @@ void onMqttConnect(bool sessionPresent) {
   device_info_JSON.clear();
   device_info_JSON["id"] = configManager.getDeviceId();
   device_info_JSON["chip"] = configManager.getChipType();
-  device_info_JSON["git_version"] = FIRMWARE_VERSION;
+  device_info_JSON["git_version"] = configManager.getGitVersion();
   device_info_JSON["status"] = "Online";
   if (configManager.isConfigLoaded()) {
     device_info_JSON["config_version"] = configManager.getConfigVersion();

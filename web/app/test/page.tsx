@@ -18,6 +18,7 @@ import { PlayArrow as TestIcon, Storage as DbIcon } from "@mui/icons-material";
 export default function TestPage() {
   const [deviceId, setDeviceId] = useState("TEST_DEVICE_001");
   const [chip, setChip] = useState("");
+  const [gitVersion, setGitVersion] = useState("fd5ee45");
   const [chipOptions, setChipOptions] = useState<string[]>([]);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +69,7 @@ export default function TestPage() {
         body: JSON.stringify({
           device_id: deviceId,
           chip: chip,
+          git_version: gitVersion,
         }),
       });
 
@@ -191,6 +193,15 @@ export default function TestPage() {
                     ))
                   )}
                 </TextField>
+                <TextField
+                  fullWidth
+                  label="Git Version"
+                  value={gitVersion}
+                  onChange={(e) => setGitVersion(e.target.value)}
+                  margin="normal"
+                  placeholder="e.g., fd5ee45"
+                  helperText="Enter the git commit hash or version"
+                />
                 {loadingChips && (
                   <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
                     <CircularProgress size={16} sx={{ mr: 1 }} />

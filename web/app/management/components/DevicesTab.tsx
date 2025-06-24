@@ -37,6 +37,7 @@ interface Device {
   id: number;
   device_id: string;
   chip: string;
+  git_version: string;
   registered_at: string;
   last_seen: string | null;
   online: boolean;
@@ -221,6 +222,7 @@ export default function DevicesTab() {
               <TableRow>
                 <TableCell>Device ID</TableCell>
                 <TableCell>Chip</TableCell>
+                <TableCell>Git Version</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Last Seen</TableCell>
                 <TableCell>Registered</TableCell>
@@ -238,6 +240,15 @@ export default function DevicesTab() {
                   </TableCell>
                   <TableCell>
                     <Chip label={device.chip} size="small" />
+                  </TableCell>
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      fontFamily="monospace"
+                      color="text.secondary"
+                    >
+                      {device.git_version}
+                    </Typography>
                   </TableCell>
                   <TableCell>
                     <Chip
