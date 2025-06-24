@@ -98,6 +98,13 @@ export class DeviceService {
         }, 3, `Get current device config for ${deviceId}`);
     }
 
+    // Update device git version
+    static async updateDeviceGitVersion(deviceId: string, gitVersion: string): Promise<void> {
+        return withRetry(async () => {
+            await pool.query('UPDATE devices SET git_version = $1 WHERE device_id = $2', [gitVersion, deviceId]);
+        }, 3, `Update device git version: ${deviceId}`);
+    }
+
     // Update device last seen
     static async updateDeviceLastSeen(deviceId: string): Promise<void> {
         return withRetry(async () => {
@@ -165,6 +172,9 @@ export class DeviceService {
                 if (!currentConfig) {
                     throw new Error(`No configuration found for device: ${device_id}`);
                 }
+
+                // update git version
+                await this.updateDeviceGitVersion(device_id, git_version);
 
                 return {
                     version: currentConfig.version,
