@@ -98,15 +98,24 @@ export default function Home() {
       <Box
         sx={{
           display: "flex",
-          alignItems: "center",
+          flexDirection: { xs: "column", sm: "row" }, // Stack on xs, row on sm and up
+          alignItems: { xs: "flex-start", sm: "center" }, // Align items to start on xs
           justifyContent: "space-between",
           mb: 3,
+          gap: { xs: 2, sm: 1 }, // Add gap for stacked layout
         }}
       >
-        <Typography variant="h4" component="h1">
+        <Typography variant="h4" component="h1" sx={{ mb: { xs: 1, sm: 0 } }}> {/* Add margin bottom on xs */}
           Device Dashboard
         </Typography>
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            alignItems: "center",
+            flexWrap: "wrap" // Allow items to wrap if needed on very small screens
+          }}
+        >
           <Chip
             label={pusherConnected ? "Pusher Connected" : "Pusher Disconnected"}
             color={pusherConnected ? "success" : "error"}

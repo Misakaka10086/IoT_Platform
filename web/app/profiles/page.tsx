@@ -153,12 +153,14 @@ export default function ProfilesPage() {
       <Box
         sx={{
           display: "flex",
+          flexDirection: { xs: "column", sm: "row" }, // Stack on xs, row on sm and up
+          alignItems: { xs: "flex-start", sm: "center" }, // Align items to start on xs
           justifyContent: "space-between",
-          alignItems: "center",
           mb: 3,
+          gap: { xs: 2, sm: 1 }, // Add gap for stacked layout
         }}
       >
-        <Typography variant="h4" component="h1">
+        <Typography variant="h4" component="h1" sx={{ mb: { xs: 1, sm: 0 } }}> {/* Add margin bottom on xs */}
           Device Profiles
         </Typography>
         <Button
@@ -222,11 +224,21 @@ export default function ProfilesPage() {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            maxWidth: { xs: 150, sm: 250, md: 400 }, // Responsive maxWidth
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={formatConfig(profile.default_config)} // Show full content on hover
+                        >
                           {formatConfig(profile.default_config)}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
                         <Typography variant="body2" color="text.secondary">
                           {new Date(profile.created_at).toLocaleDateString()}
                         </Typography>

@@ -82,7 +82,7 @@ export default function SettingsPage() {
           <Typography variant="body2" color="text.secondary">
             To enable WebHook functionality, configure EMQX to send events to:
             <br />
-            <code>https://your-domain.vercel.app/api/emqx/webhook</code>
+            <code style={{ wordBreak: 'break-all' }}>https://your-domain.vercel.app/api/emqx/webhook</code>
             <br />
             <br />
             Events to configure: <code>client.connected</code> and{" "}

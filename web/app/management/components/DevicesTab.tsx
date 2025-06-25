@@ -22,9 +22,9 @@ import {
   TextField,
   CircularProgress,
   Tooltip,
-  Card,
-  CardContent,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 import {
   Delete as DeleteIcon,
   Edit as EditIcon,
@@ -32,6 +32,7 @@ import {
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import ConfigurationDialog from "./ConfigurationDialog";
+import DeviceCardMobile from "./DeviceCardMobile"; // Import the new component
 
 interface Device {
   id: number;
@@ -56,6 +57,9 @@ export default function DevicesTab() {
   const [descriptionFormData, setDescriptionFormData] = useState({
     description: "",
   });
+
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("md")); // md breakpoint for table column changes
 
   useEffect(() => {
     loadDevices();
@@ -215,26 +219,38 @@ export default function DevicesTab() {
             Devices will appear here when they register with the platform.
           </Typography>
         </Box>
+      ) : isMobile ? (
+        <Box>
+          {devices.map((device) => (
+            <DeviceCardMobile
+              key={device.id}
+              device={device}
+              onEditConfig={handleEditConfig}
+              onEditDescription={handleEditDescription}
+              onDelete={handleDeleteDevice}
+            />
+          ))}
+        </Box>
       ) : (
         <TableContainer component={Paper}>
-          <Table>
+          <Table sx={{ minWidth: 650 }} aria-label="devices table">
             <TableHead>
               <TableRow>
-                <TableCell>Device ID</TableCell>
-                <TableCell>Chip</TableCell>
-                <TableCell>Git Version</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Last Seen</TableCell>
-                <TableCell>Registered</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell align="center">Actions</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Device ID</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Chip</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Git Version</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Status</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Last Seen</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Registered</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>Description</TableCell>
+                <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {devices.map((device) => (
                 <TableRow key={device.id}>
                   <TableCell>
-                    <Typography variant="body2" fontFamily="monospace">
+                    <Typography variant="body2" fontFamily="monospace" sx={{ display: 'block', maxWidth: 150 , overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {device.device_id}
                     </Typography>
                   </TableCell>
@@ -255,21 +271,22 @@ export default function DevicesTab() {
                       label={device.online ? "Online" : "Offline"}
                       color={device.online ? "success" : "error"}
                       size="small"
+                      sx={{ minWidth: 70 }} // Ensure chip has enough width
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
                       {formatDate(device.last_seen)}
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
                       {formatDate(device.registered_at)}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" sx={{ display: 'block', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {device.description || "-"}
                       </Typography>
                       <Tooltip title="Edit Description">

@@ -20,7 +20,9 @@ import {
   DialogActions,
   CircularProgress,
   Tooltip,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 import {
   Delete as DeleteIcon,
   Edit as EditIcon,
@@ -28,6 +30,7 @@ import {
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import ProfileDialog from "./ProfileDialog";
+import ProfileCardMobile from "./ProfileCardMobile"; // Import the new component
 
 interface DeviceProfile {
   id: number;
@@ -51,6 +54,9 @@ export default function ProfilesTab() {
     model: "",
     default_config: "",
   });
+
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm")); // sm breakpoint for table cell truncation
 
   useEffect(() => {
     loadProfiles();
@@ -235,9 +241,20 @@ export default function ProfilesTab() {
             Create your first device profile to get started.
           </Typography>
         </Box>
+      ) : isMobile ? (
+        <Box>
+          {profiles.map((profile) => (
+            <ProfileCardMobile
+              key={profile.id}
+              profile={profile}
+              onEdit={handleEditProfile}
+              onDelete={handleDeleteProfile}
+            />
+          ))}
+        </Box>
       ) : (
         <TableContainer component={Paper}>
-          <Table>
+          <Table sx={{ minWidth: 600 }} aria-label="profiles table">
             <TableHead>
               <TableRow>
                 <TableCell>Model</TableCell>
@@ -263,11 +280,12 @@ export default function ProfilesTab() {
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                       }}
+                      title={JSON.stringify(profile.default_config)} // Show full config on hover
                     >
                       {JSON.stringify(profile.default_config)}
                     </Typography>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
                     <Typography variant="body2">
                       {formatDate(profile.created_at)}
                     </Typography>

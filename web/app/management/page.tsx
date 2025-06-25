@@ -52,6 +52,9 @@ export default function ManagementPage() {
         onChange={handleTabChange}
         aria-label="management tabs"
         sx={{ borderBottom: 1, borderColor: "divider" }}
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
       >
         <Tab
           label="Devices"
