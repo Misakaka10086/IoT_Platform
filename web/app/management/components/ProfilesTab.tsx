@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  CircularProgress,
+  // CircularProgress, // No longer directly used for loading state here
   Tooltip,
   useMediaQuery,
 } from "@mui/material";
@@ -30,7 +30,8 @@ import {
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import ProfileDialog from "./ProfileDialog";
-import ProfileCardMobile from "./ProfileCardMobile"; // Import the new component
+import ProfileCardMobile from "./ProfileCardMobile";
+import PinwheelLoader from "../../components/PinwheelLoader"; // Import PinwheelLoader
 
 interface DeviceProfile {
   id: number;
@@ -180,12 +181,17 @@ export default function ProfilesTab() {
       <Box
         sx={{
           display: "flex",
+          flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: "200px",
+          minHeight: "300px", // Adjusted for typical tab content height
+          py: 3,
         }}
       >
-        <CircularProgress />
+        <PinwheelLoader />
+        <Typography variant="h6" color="text.secondary" sx={{ mt: 3 }}>
+          Loading profiles...
+        </Typography>
       </Box>
     );
   }

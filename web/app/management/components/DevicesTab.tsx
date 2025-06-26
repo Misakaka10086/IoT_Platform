@@ -23,6 +23,7 @@ import {
   CircularProgress,
   Tooltip,
   useMediaQuery,
+  // CircularProgress, // No longer directly used for loading state here
 } from "@mui/material";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
 import {
@@ -32,7 +33,8 @@ import {
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import ConfigurationDialog from "./ConfigurationDialog";
-import DeviceCardMobile from "./DeviceCardMobile"; // Import the new component
+import DeviceCardMobile from "./DeviceCardMobile";
+import PinwheelLoader from "../../components/PinwheelLoader"; // Import PinwheelLoader
 
 interface Device {
   id: number;
@@ -165,12 +167,17 @@ export default function DevicesTab() {
       <Box
         sx={{
           display: "flex",
+          flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: "200px",
+          minHeight: "300px", // Adjusted for typical tab content height
+          py: 3,
         }}
       >
-        <CircularProgress />
+        <PinwheelLoader />
+        <Typography variant="h6" color="text.secondary" sx={{ mt: 3 }}>
+          Loading devices...
+        </Typography>
       </Box>
     );
   }

@@ -11,11 +11,12 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
-  Skeleton,
+  // Skeleton, // No longer needed directly here
 } from "@mui/material";
 import { Refresh as RefreshIcon } from "@mui/icons-material";
 import { DeviceCard } from "./components/DeviceCard";
 import { useDeviceStatus } from "./hooks/useDeviceStatus";
+import PinwheelLoader from "./components/PinwheelLoader"; // Import the new loader
 
 export default function Home() {
   const {
@@ -34,59 +35,23 @@ export default function Home() {
 
   if (loading) {
     return (
-      <Box>
-        {/* Header with loading skeleton */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            mb: 3,
-          }}
-        >
-          <Skeleton variant="text" width={200} height={40} />
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-            <Skeleton variant="rectangular" width={120} height={24} />
-            <Skeleton variant="circular" width={32} height={32} />
-            <Skeleton variant="text" width={100} height={20} />
-          </Box>
-        </Box>
-
-        {/* Loading grid */}
-        <Grid container spacing={3}>
-          {[1, 2, 3, 4, 5, 6].map((item) => (
-            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={item}>
-              <Paper sx={{ p: 2 }}>
-                <Skeleton variant="text" width="60%" height={24} />
-                <Skeleton
-                  variant="text"
-                  width="40%"
-                  height={20}
-                  sx={{ mb: 1 }}
-                />
-                <Skeleton variant="rectangular" width="100%" height={100} />
-                <Box sx={{ mt: 1, display: "flex", gap: 1 }}>
-                  <Skeleton variant="rectangular" width={60} height={24} />
-                  <Skeleton variant="rectangular" width={80} height={24} />
-                </Box>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
-
-        {/* Center loading indicator */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            mt: 4,
-            gap: 2,
-          }}
-        >
-          <CircularProgress size={24} />
-          <Typography variant="body2" color="text.secondary">
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column", // Outer box still controls overall page centering
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "calc(100vh - 200px)",
+          py: 3,
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}> {/* Inner box for grouping loader and text */}
+          <PinwheelLoader />
+          <Typography variant="h6" color="text.secondary" sx={{ mt: 3 }}> {/* Adjusted margin-top */}
             Loading devices...
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}> {/* Adjusted margin-top */}
+            Please wait while we fetch the latest device statuses.
           </Typography>
         </Box>
       </Box>

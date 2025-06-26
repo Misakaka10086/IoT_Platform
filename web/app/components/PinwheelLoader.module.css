@@ -1,0 +1,206 @@
+/* From Uiverse.io by m1her */
+.loader {
+  position: relative;
+  width: 50px;
+  /* height: 20px; Removed explicit height */
+  padding-bottom: 50px; /* Approx 150px (stick) + 20px (pinwheel) + 50px (grass) + 10px buffer, total height ~250px */
+  /* Ensure the loader itself is centered if its parent is a flex container */
+  margin: auto;
+}
+
+.stick {
+  width: 5px;
+  height: 150px;
+  background-color: #a3541c;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, 0%);
+  z-index: -1;
+}
+
+.container {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  transform: rotate(30deg) scale(0.77);
+  animation: rotateAnimation 3s infinite linear;
+}
+
+.pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background-color: white;
+  z-index: 10;
+  border-radius: 999px;
+}
+
+.paper_container {
+  /* Changed from paper-container to be valid CSS module class name */
+  position: absolute;
+  scale: 1.5;
+}
+
+.paper_leaf_1 {
+  /* Changed from paper-leaf-1 */
+  position: relative;
+  width: 0;
+  height: 0;
+  clip-path: ellipse(50% 50% at 50% 109%);
+  border-left: 30px solid transparent;
+  border-right: 30px solid transparent;
+  border-top-left-radius: 222px;
+  border-top-right-radius: 222px;
+}
+
+.paper_leaf_2 {
+  /* Changed from paper-leaf-2 */
+  position: absolute;
+  right: -1px;
+  bottom: 0;
+  width: 30px;
+  height: 20.5px;
+  border-bottom-right-radius: 2px;
+  z-index: 2;
+}
+
+.paper_leaf_2::before {
+  /* Changed from paper-leaf-2::before */
+  content: "";
+  position: absolute;
+  right: 1/2; /* This might need to be 50% or a calc value depending on interpretation */
+  bottom: 0;
+  width: 24.5px;
+  height: 20.5px;
+  clip-path: ellipse(100% 100% at 0% 100%);
+  border-top-right-radius: 999px;
+  box-shadow: inset -5px 0px 3px -3px rgba(0, 0, 0, 0.2),
+    10px -10px 10px 0px rgba(255, 255, 255, 0.1);
+  z-index: 1;
+}
+
+.red {
+  top: 50%;
+  left: 50%;
+  transform: translate(-80%, -85%);
+  z-index: 2;
+}
+
+.red_1 {
+  /* Changed from red-1 */
+  border-bottom: 50px solid #ff5733;
+}
+
+.red_2 {
+  /* Changed from red-2 */
+  background-color: #ff5733;
+}
+
+.rotate_90 {
+  /* Changed from rotate-90 */
+  transform: rotate(90deg) translate(-75%, -10%);
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+}
+
+.yellow_1 {
+  /* Changed from yellow-1 */
+  border-bottom: 50px solid #ffc300;
+}
+
+.yellow_2 {
+  /* Changed from yellow-2 */
+  background-color: #ffc300;
+}
+
+.rotate_180 {
+  /* Changed from rotate-180 */
+  transform: rotate(180deg) translate(-16%, -17%);
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+}
+
+.green_1 {
+  /* Changed from green-1 */
+  border-bottom: 50px solid #2ecc71;
+}
+
+.green_2 {
+  /* Changed from green-2 */
+  background-color: #2ecc71;
+}
+
+.rotate_270 {
+  /* Changed from rotate-270 */
+  transform: rotate(270deg) translate(-22%, -90%);
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+}
+
+.blue_1 {
+  /* Changed from blue-1 */
+  border-bottom: 50px solid #3498db;
+}
+
+.blue_2 {
+  /* Changed from blue-2 */
+  background-color: #3498db;
+}
+
+/*
+  Original .grass_container is not used directly as .line's pseudo-elements will form the grass.
+  The .line element itself will be positioned relative to the .loader.
+*/
+
+.line {
+  position: absolute;
+  bottom: -170px; /* Position below the stick (stick height 150px + some spacing) */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px; /* Adjust width as needed for the grass visuals */
+  height: 50px; /* Height for the main grass elements */
+  z-index: -2;
+}
+
+.line::before {
+  /* Main grass mounds */
+  content: "";
+  position: absolute;
+  background-color: #6a994e;
+  width: 100px;
+  height: 50px;
+  border-radius: 50px 50px 0 0;
+  bottom: 0; /* Align to the bottom of .line container */
+  left: 0px; /* Start from left */
+  box-shadow: 100px 0 #78a85b; /* Second mound */
+}
+
+.line::after {
+  /* Smaller grass details */
+  content: "";
+  position: absolute;
+  background-color: #78a85b;
+  width: 50px;
+  height: 25px;
+  border-radius: 50px 50px 0 0;
+  bottom: 0; /* Align to the bottom of .line container */
+  left: -40px; /* Adjust left for variety */
+  box-shadow: /* Multiple smaller details */ 50px 0 #55803c, 105px 0 #6a994e,
+    195px 0 #6a994e, 225px 0 #a7c957;
+}
+
+@keyframes rotateAnimation {
+  from {
+    transform: rotate(30deg) scale(0.77);
+  }
+  to {
+    transform: rotate(390deg) scale(0.77);
+  }
+}
