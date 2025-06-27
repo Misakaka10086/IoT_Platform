@@ -12,6 +12,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import {
   Memory as ChipIcon,
@@ -19,12 +20,15 @@ import {
   PowerSettingsNew as PowerIcon,
   PowerOff as PowerOffIcon,
   GitHub as GitHubIcon,
+  CheckCircleOutline,
+  ErrorOutline,
 } from "@mui/icons-material";
 import { keyframes } from "@emotion/react";
 import { DeviceStatus } from "../../types/device";
-
+import { OTAStatus } from "../../types/ota-types";
 interface DeviceCardProps {
   device: DeviceStatus;
+  otaStatus?: OTAStatus;
   onStatusUpdate?: (
     deviceId: string,
     status: "online" | "offline"
@@ -45,10 +49,67 @@ const pulse = keyframes`
 
 export const DeviceCard: React.FC<DeviceCardProps> = ({
   device,
+  otaStatus,
   onStatusUpdate,
 }) => {
   const muiTheme = useMuiTheme();
   const isOnline = device.status === "online";
+
+  // 👈 4. 新增的OTA渲染逻辑
+  const renderOtaInfo = () => {
+    if (!otaStatus) return null; // 如果没有OTA状态，不渲染任何东西
+
+    // 如果OTA有最终结果
+    if (otaStatus.result) {
+      return (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            mt: 1,
+            p: 1,
+            borderRadius: 1,
+            bgcolor:
+              otaStatus.result === "success" ? "success.light" : "error.light",
+          }}
+        >
+          {otaStatus.result === "success" ? (
+            <CheckCircleOutline color="success" />
+          ) : (
+            <ErrorOutline color="error" />
+          )}
+          <Typography variant="body2" color="text.primary">
+            OTA {otaStatus.result}
+          </Typography>
+        </Box>
+      );
+    }
+
+    // 如果OTA正在进行中
+    if (otaStatus.progressStatus) {
+      return (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            mt: 1,
+            p: 1,
+            borderRadius: 1,
+            bgcolor: "info.light",
+          }}
+        >
+          <CircularProgress size={20} />
+          <Typography variant="body2" color="text.primary">
+            {otaStatus.progressStatus}
+          </Typography>
+        </Box>
+      );
+    }
+
+    return null;
+  };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Never";
@@ -129,6 +190,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             </Box>
           </Box>
           <Divider />
+          {renderOtaInfo()}
           <Stack spacing={1.5}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               <ChipIcon sx={{ color: "text.secondary" }} />

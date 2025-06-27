@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { DeviceStatus } from '../../types/device';
-import { pusherClientService, DeviceStatusUpdate, DeviceConnectionEvent } from '../services/pusherClientService';
+import {
+    pusherClientService,
+    DeviceStatusUpdate,
+    DeviceConnectionEvent
+} from '../services/pusherClientService';
+import { usePusher } from '../context/PusherProvider';
 
 interface UseDeviceStatusReturn {
     devices: DeviceStatus[];
@@ -14,110 +19,74 @@ interface UseDeviceStatusReturn {
 }
 
 export function useDeviceStatus(): UseDeviceStatusReturn {
+    const { isPusherInitialized, isPusherConnected } = usePusher();
     const [devices, setDevices] = useState<DeviceStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [pusherConnected, setPusherConnected] = useState(false);
-    const [isInitialized, setIsInitialized] = useState(false);
 
     // Initialize Pusher client
     useEffect(() => {
-        const initializePusher = async () => {
-            try {
-                // Get Pusher config from API
-                const response = await fetch('/api/pusher/config');
-                const data = await response.json();
-
-                if (data.success) {
-                    pusherClientService.initialize(data.config);
-
-                    // Set up connection status monitoring
-                    const checkConnectionStatus = () => {
-                        const connected = pusherClientService.isClientConnected();
-                        setPusherConnected(connected);
-                    };
-
-                    // Initial check
-                    checkConnectionStatus();
-
-                    // Set up interval to monitor connection status
-                    const interval = setInterval(checkConnectionStatus, 1000);
-
-                    // Subscribe to device status updates
-                    pusherClientService.subscribeToDeviceStatus(
-                        (statusUpdate: DeviceStatusUpdate) => {
-                            console.log('📡 Received status update:', statusUpdate);
-                            setDevices(prevDevices => {
-                                const updatedDevices = prevDevices.map(device =>
-                                    device.device_id === statusUpdate.device_id
-                                        ? {
-                                            ...device,
-                                            status: statusUpdate.status,
-                                            last_seen: statusUpdate.timestamp,
-                                            data: { ...device.data, ...statusUpdate.data }
-                                        }
-                                        : device
-                                );
-
-                                // If device doesn't exist, add it
-                                if (!updatedDevices.find(d => d.device_id === statusUpdate.device_id)) {
-                                    updatedDevices.push({
-                                        device_id: statusUpdate.device_id,
-                                        status: statusUpdate.status,
-                                        last_seen: statusUpdate.timestamp,
-                                        data: statusUpdate.data || {}
-                                    });
+        if (isPusherInitialized) {
+            console.log('Pusher is initialized, subscribing to device status channels...');
+            // Subscribe to device status updates
+            pusherClientService.subscribeToDeviceStatus(
+                (statusUpdate: DeviceStatusUpdate) => {
+                    console.log('📡 Received status update:', statusUpdate);
+                    setDevices(prevDevices => {
+                        const updatedDevices = prevDevices.map(device =>
+                            device.device_id === statusUpdate.device_id
+                                ? {
+                                    ...device,
+                                    status: statusUpdate.status,
+                                    last_seen: statusUpdate.timestamp,
+                                    data: { ...device.data, ...statusUpdate.data }
                                 }
+                                : device
+                        );
 
-                                return updatedDevices;
+                        // If device doesn't exist, add it
+                        if (!updatedDevices.find(d => d.device_id === statusUpdate.device_id)) {
+                            updatedDevices.push({
+                                device_id: statusUpdate.device_id,
+                                status: statusUpdate.status,
+                                last_seen: statusUpdate.timestamp,
+                                data: statusUpdate.data || {}
                             });
-                        },
-                        (error) => {
-                            console.error('❌ Pusher status subscription error:', error);
-                            setError('Failed to subscribe to device status updates');
                         }
-                    );
 
-                    // Subscribe to device connection events
-                    pusherClientService.subscribeToDeviceEvents(
-                        (connectedEvent: DeviceConnectionEvent) => {
-                            console.log('📡 Device connected:', connectedEvent);
-                            // Status update will be handled by status subscription
-                        },
-                        (disconnectedEvent: DeviceConnectionEvent) => {
-                            console.log('📡 Device disconnected:', disconnectedEvent);
-                            // Status update will be handled by status subscription
-                        },
-                        (error) => {
-                            console.error('❌ Pusher events subscription error:', error);
-                            setError('Failed to subscribe to device events');
-                        }
-                    );
-
-                    setIsInitialized(true);
-
-                    // Return cleanup function
-                    return () => clearInterval(interval);
-                } else {
-                    console.error('❌ Failed to get Pusher config:', data.error);
-                    setError('Failed to initialize real-time connection');
-                    setIsInitialized(true);
+                        return updatedDevices;
+                    });
+                },
+                (error) => {
+                    console.error('❌ Pusher status subscription error:', error);
+                    setError('Failed to subscribe to device status updates');
                 }
-            } catch (err) {
-                console.error('❌ Error initializing Pusher:', err);
-                setError('Failed to initialize real-time connection');
-                setIsInitialized(true);
-            }
-        };
+            );
 
-        const cleanup = initializePusher();
+            // Subscribe to device connection events
+            pusherClientService.subscribeToDeviceEvents(
+                (connectedEvent: DeviceConnectionEvent) => {
+                    console.log('📡 Device connected:', connectedEvent);
+                    // Status update will be handled by status subscription
+                },
+                (disconnectedEvent: DeviceConnectionEvent) => {
+                    console.log('📡 Device disconnected:', disconnectedEvent);
+                    // Status update will be handled by status subscription
+                },
+                (error) => {
+                    console.error('❌ Pusher events subscription error:', error);
+                    setError('Failed to subscribe to device events');
+                }
+            );
 
-        // Cleanup on unmount
-        return () => {
-            cleanup?.then(clearInterval => clearInterval?.());
-            // 不要在这里调用 disconnect，让连接保持活跃
-        };
-    }, []);
+            return () => {
+                console.log('Cleaning up device status subscriptions...');
+                pusherClientService.unsubscribeFromDeviceStatus();
+                pusherClientService.unsubscribeFromDeviceEvents();
+            };
+        }
+
+    }, [isPusherInitialized]);
 
     // Fetch devices from API
     const fetchDevices = useCallback(async () => {
@@ -143,10 +112,10 @@ export function useDeviceStatus(): UseDeviceStatusReturn {
 
     // Initial fetch - 等待 Pusher 初始化完成后再获取数据
     useEffect(() => {
-        if (isInitialized) {
+        if (isPusherInitialized) {
             fetchDevices();
         }
-    }, [isInitialized, fetchDevices]);
+    }, [isPusherInitialized, fetchDevices]);
 
     // Update device status
     const updateDeviceStatus = useCallback(async (deviceId: string, status: 'online' | 'offline') => {
@@ -192,7 +161,7 @@ export function useDeviceStatus(): UseDeviceStatusReturn {
         devices,
         loading,
         error,
-        pusherConnected,
+        pusherConnected: isPusherConnected,
         refreshDevices,
         updateDeviceStatus,
     };

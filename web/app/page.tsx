@@ -16,6 +16,7 @@ import {
 import { Refresh as RefreshIcon } from "@mui/icons-material";
 import { DeviceCard } from "./components/DeviceCard";
 import { useDeviceStatus } from "./hooks/useDeviceStatus";
+import { useDeviceOTAStatus } from "./hooks/useDeviceOTAStatus";
 import PinwheelLoader from "./components/PinwheelLoader"; // Import the new loader
 
 export default function Home() {
@@ -27,6 +28,8 @@ export default function Home() {
     refreshDevices,
     updateDeviceStatus,
   } = useDeviceStatus();
+
+  const { otaStatuses, error: otaError } = useDeviceOTAStatus();
 
   const onlineDevices = devices.filter((device) => device.status === "online");
   const offlineDevices = devices.filter(
@@ -45,12 +48,24 @@ export default function Home() {
           py: 3,
         }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}> {/* Inner box for grouping loader and text */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          {" "}
+          {/* Inner box for grouping loader and text */}
           <PinwheelLoader />
-          <Typography variant="h6" color="text.secondary" sx={{ mt: 3 }}> {/* Adjusted margin-top */}
+          <Typography variant="h6" color="text.secondary" sx={{ mt: 3 }}>
+            {" "}
+            {/* Adjusted margin-top */}
             Loading devices...
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}> {/* Adjusted margin-top */}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {" "}
+            {/* Adjusted margin-top */}
             Please wait while we fetch the latest device statuses.
           </Typography>
         </Box>
@@ -70,7 +85,9 @@ export default function Home() {
           gap: { xs: 2, sm: 1 }, // Add gap for stacked layout
         }}
       >
-        <Typography variant="h4" component="h1" sx={{ mb: { xs: 1, sm: 0 } }}> {/* Add margin bottom on xs */}
+        <Typography variant="h4" component="h1" sx={{ mb: { xs: 1, sm: 0 } }}>
+          {" "}
+          {/* Add margin bottom on xs */}
           Device Dashboard
         </Typography>
         <Box
@@ -78,7 +95,7 @@ export default function Home() {
             display: "flex",
             gap: 1,
             alignItems: "center",
-            flexWrap: "wrap" // Allow items to wrap if needed on very small screens
+            flexWrap: "wrap", // Allow items to wrap if needed on very small screens
           }}
         >
           <Chip
@@ -136,17 +153,21 @@ export default function Home() {
                 <Chip label="Online" color="success" size="small" />
               </Typography>
               <Grid container spacing={3}>
-                {onlineDevices.map((device) => (
-                  <Grid
-                    size={{ xs: 12, sm: 6, md: 4, lg: 3 }}
-                    key={device.device_id}
-                  >
-                    <DeviceCard
-                      device={device}
-                      onStatusUpdate={updateDeviceStatus}
-                    />
-                  </Grid>
-                ))}
+                {onlineDevices.map((device) => {
+                  const currentOtaStatus = otaStatuses[device.device_id];
+                  return (
+                    <Grid
+                      size={{ xs: 12, sm: 6, md: 4, lg: 3 }}
+                      key={device.device_id}
+                    >
+                      <DeviceCard
+                        device={device}
+                        onStatusUpdate={updateDeviceStatus}
+                        otaStatus={currentOtaStatus} // 👈 传递 otaStatus
+                      />
+                    </Grid>
+                  );
+                })}
               </Grid>
             </Box>
           )}

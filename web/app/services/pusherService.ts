@@ -15,6 +15,18 @@ export interface DeviceConnectionEventData extends PusherEventData {
     reason?: string;
 }
 
+export interface DeviceOTAProgressUpdateData {
+    device_id: string;
+    status: string;
+}
+
+export interface DeviceOTAResultData {
+    device_id: string;
+    status: 'success' | 'error';
+
+}
+
+
 class PusherService {
     private pusher: Pusher;
 
@@ -103,7 +115,54 @@ class PusherService {
             throw error;
         }
     }
+    // 触发OTA进度更新
+    async triggerDeviceOTAProgressUpdate(deviceId: string, status: string): Promise<void> {
+        try {
+            const eventData: DeviceOTAProgressUpdateData = {
+                device_id: deviceId,
+                status
+            };
 
+            await this.pusher.trigger('device-ota-status', 'progress-update', eventData);
+
+            console.log(`📡 Pusher: Device ${deviceId} ota progress update to ${status}`);
+        } catch (error) {
+            console.error('❌ Pusher trigger error:', error);
+            throw error;
+        }
+    }
+    // 触发OTA结果更新成功
+    async triggerDeviceOTASuccess(deviceId: string): Promise<void> {
+        try {
+            const eventData: DeviceOTAResultData = {
+                device_id: deviceId,
+                status: "success"
+            };
+
+            await this.pusher.trigger('device-ota-events', 'ota-success', eventData);
+
+            console.log(`📡 Pusher: Device ${deviceId} ota result update to success`);
+        } catch (error) {
+            console.error('❌ Pusher trigger error:', error);
+            throw error;
+        }
+    }
+    // 触发OTA结果更新失败
+    async triggerDeviceOTAError(deviceId: string): Promise<void> {
+        try {
+            const eventData: DeviceOTAResultData = {
+                device_id: deviceId,
+                status: "error"
+            };
+
+            await this.pusher.trigger('device-ota-events', 'ota-error', eventData);
+
+            console.log(`📡 Pusher: Device ${deviceId} ota result update to error`);
+        } catch (error) {
+            console.error('❌ Pusher trigger error:', error);
+            throw error;
+        }
+    }
     // 获取应用信息
     async getAppInfo(): Promise<any> {
         try {

@@ -48,4 +48,5 @@ export interface DeviceStatus {
     status: 'online' | 'offline';
     last_seen: string;
     data?: Record<string, any>;
-} 
+}
+

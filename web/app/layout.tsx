@@ -5,6 +5,7 @@ import { AppThemeProvider } from "./components/AppThemeProvider";
 import { CssBaseline, Box, Container } from "@mui/material";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
+import { PusherProvider } from "./context/PusherProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,20 +23,22 @@ export default function RootLayout({
     <html lang="en" style={{ height: "100%" }}>
       <body className={inter.className} style={{ height: "100%" }}>
         <AppThemeProvider>
-          <CssBaseline />
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              minHeight: "100vh",
-            }}
-          >
-            <Header />
-            <Container component="main" sx={{ flex: 1, py: 3 }}>
-              {children}
-            </Container>
-            <Footer />
-          </Box>
+          <PusherProvider>
+            <CssBaseline />
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                minHeight: "100vh",
+              }}
+            >
+              <Header />
+              <Container component="main" sx={{ flex: 1, py: 3 }}>
+                {children}
+              </Container>
+              <Footer />
+            </Box>
+          </PusherProvider>
         </AppThemeProvider>
       </body>
     </html>
