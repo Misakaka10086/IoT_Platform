@@ -58,12 +58,12 @@ async function processOtaUpdate(event: EmqxMassagePublish) {
         }
 
     } catch (e) {
-        // 如果 `event.payload` 不是一个合法的JSON字符串，JSON.parse会抛出异常
-        console.error('❌ 解析OTA payload失败，它可能不是一个有效的JSON字符串。');
-        // 打印出原始的payload以供调试
-        console.error('   - 原始Payload:', event.payload);
+        // JSON.parse will throw an exception if `event.payload` is not a valid JSON string
+        console.error('❌ Failed to parse OTA payload, it might not be a valid JSON string.');
+        // Print the original payload for debugging
+        console.error('   - Original Payload:', event.payload);
         if (e instanceof Error) {
-            console.error('   - 错误信息:', e.message);
+            console.error('   - Error message:', e.message);
         }
     }
 }

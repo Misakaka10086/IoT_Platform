@@ -80,7 +80,7 @@ export function useDeviceStatus(): UseDeviceStatusReturn {
             );
 
             return () => {
-                console.log('Cleaning up device status subscriptions...');
+                console.log('🧹 Cleaning up device status subscriptions...');
                 pusherClientService.unsubscribeFromDeviceStatus();
                 pusherClientService.unsubscribeFromDeviceEvents();
             };

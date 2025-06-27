@@ -149,10 +149,10 @@ export class DeviceService {
                 // 尝试获取设备 profile
                 let profile = await this.getDeviceProfile(chip);
 
-                // ⬇️ 如果找不到该 chip 的配置，则使用 "default"
+                // If no profile is found for the chip, use "default" as a fallback
                 if (!profile) {
                     profile = await this.getDeviceProfile("default");
-                    console.log(`No default configuration found for chip: ${chip}, using "default" profile`);
+                    console.warn(`⚠️ No profile found for chip: ${chip}. Using "default" profile as fallback.`);
                 }
 
                 if (!profile) {

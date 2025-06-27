@@ -77,7 +77,7 @@ export function useDeviceOTAStatus(): useDeviceOTAStatusReturn {
             );
 
             return () => {
-                console.log('Cleaning up device ota status subscriptions...');
+                console.log('🧹 Cleaning up device OTA status subscriptions...');
                 pusherClientService.unsubscribeFromDeviceOTAStatus();
                 pusherClientService.unsubscribeFromDeviceOTAEvents();
             };
