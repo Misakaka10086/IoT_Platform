@@ -1,12 +1,14 @@
+// app/api/devices/[deviceId]/firmware-versions/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import pool, { withRetry } from '../../../../../lib/database';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { deviceId: string } }
+  { params }: { params: Promise<{ deviceId: string }> } // <--- 修复：将 params 类型修正为 Promise
 ) {
   try {
-    const { deviceId } = params;
+    const { deviceId } = await params; // <--- 修复：添加 await
 
     if (!deviceId) {
       return NextResponse.json({ error: 'Device ID is required' }, { status: 400 });

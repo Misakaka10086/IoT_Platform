@@ -6,10 +6,10 @@ import { GitCommitInfo } from '../../../../../types/ota-types';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { version: string } }
+    { params }: { params: Promise<{ version: string }> } // <--- 修复：将 params 类型修正为 Promise
 ) {
     try {
-        const { version } = params;
+        const { version } = await params; // <--- 修复：添加 await 来解析 Promise
 
         // Validate the version parameter to ensure it looks like a SHA hash
         if (!version || !/^[a-f0-9]{7,40}$/.test(version)) {
