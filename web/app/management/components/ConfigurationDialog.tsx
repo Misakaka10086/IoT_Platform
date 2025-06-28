@@ -286,8 +286,12 @@ export default function ConfigurationDialog({
                     </Typography>
                     <Chip
                       icon={<GitHubIcon />}
-                      label={v.git_version}
+                      label={v.git_version.substring(0, 6)}
                       size="small"
+                      sx={{
+                        fontFamily: "var(--font-jetbrains-mono), monospace",
+                        fontSize: "0.875rem",
+                      }}
                     />
                     {v.is_current && <Chip label="Current" color="primary" />}
                   </Box>

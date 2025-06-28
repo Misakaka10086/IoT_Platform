@@ -44,8 +44,11 @@ interface DeviceCardMobileProps {
 const formatDate = (dateString: string | null) => {
   if (!dateString) return "Never";
   return new Date(dateString).toLocaleString(undefined, {
-    year: 'numeric', month: 'numeric', day: 'numeric',
-    hour: '2-digit', minute: '2-digit'
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 };
 
@@ -69,7 +72,17 @@ export const DeviceCardMobile: React.FC<DeviceCardMobileProps> = ({
               mb: 1,
             }}
           >
-            <Typography variant="h6" component="div" sx={{ fontWeight: "medium", flexGrow: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{
+                fontWeight: "medium",
+                flexGrow: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               ID: {device.device_id}
             </Typography>
             <Chip
@@ -82,7 +95,7 @@ export const DeviceCardMobile: React.FC<DeviceCardMobileProps> = ({
           </Box>
           <Divider />
 
-          <Stack spacing={1} sx={{pt: 1}}>
+          <Stack spacing={1} sx={{ pt: 1 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <InfoIcon fontSize="small" color="action" />
               <Typography
@@ -99,7 +112,11 @@ export const DeviceCardMobile: React.FC<DeviceCardMobileProps> = ({
                 Desc: {device.description || "Not set"}
               </Typography>
               <Tooltip title="Edit Description">
-                <IconButton size="small" onClick={() => onEditDescription(device)} color="primary">
+                <IconButton
+                  size="small"
+                  onClick={() => onEditDescription(device)}
+                  color="primary"
+                >
                   <EditIcon fontSize="inherit" />
                 </IconButton>
               </Tooltip>
@@ -121,14 +138,14 @@ export const DeviceCardMobile: React.FC<DeviceCardMobileProps> = ({
                 Registered: {formatDate(device.registered_at)}
               </Typography>
             </Box>
-             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <Typography variant="caption" color="text.secondary">
-                Git Ver: {device.git_version}
+                Git Ver: {device.git_version.substring(0, 6)}
               </Typography>
             </Box>
           </Stack>
 
-          <Divider sx={{mt: 1, mb:1}} />
+          <Divider sx={{ mt: 1, mb: 1 }} />
           <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
             <Tooltip title="Edit Configuration">
               <IconButton

@@ -201,7 +201,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               <GitHubIcon sx={{ color: "text.secondary" }} />
               <Typography variant="body2" color="text.secondary">
-                Git: <strong>{device.data?.git_version || "Unknown"}</strong>
+                Git:{" "}
+                <strong>
+                  {device.data?.git_version.substring(0, 6) || "Unknown"}
+                </strong>
               </Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>

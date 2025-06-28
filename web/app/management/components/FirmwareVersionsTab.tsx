@@ -203,7 +203,7 @@ export default function FirmwareVersionsTab() {
             </MenuItem>
             {devices.map((device) => (
               <MenuItem key={device.device_id} value={device.device_id}>
-                {device.device_id} ({device.description || "No Description"})
+                {device.device_id}
               </MenuItem>
             ))}
           </Select>
@@ -233,6 +233,10 @@ export default function FirmwareVersionsTab() {
                       ? "filled"
                       : "outlined"
                   }
+                  sx={{
+                    fontFamily: "var(--font-jetbrains-mono), monospace",
+                    fontSize: "1rem",
+                  }}
                   icon={<GitHubIcon />}
                 />
               ))}
@@ -275,8 +279,8 @@ export default function FirmwareVersionsTab() {
                 borderRadius: 1,
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
-                fontFamily: "monospace",
-                fontSize: "0.875rem",
+                fontFamily: "var(--font-jetbrains-mono), monospace",
+                fontSize: "1.2rem",
               }}
             >
               {commitInfo.message}
@@ -287,7 +291,16 @@ export default function FirmwareVersionsTab() {
                 Authored on: {formatDate(commitInfo.authored_at)}
               </Typography>
               <LocalOffer fontSize="small" color="action" />
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  // 关键样式：允许在长单词或字符串内部换行
+                  overflowWrap: "break-word",
+                  // 确保组件宽度能被正确计算
+                  minWidth: 0,
+                }}
+              >
                 SHA: {commitInfo.version}
               </Typography>
             </Box>

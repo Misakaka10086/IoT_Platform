@@ -25,7 +25,7 @@ function loadEnv() {
 loadEnv();
 
 // 关键改动：根据环境决定 SSL 配置
-const sslConfig = process.env.NODE_ENV === 'production' 
+const sslConfig = process.env.APP_ENV === 'production' 
   ? { rejectUnauthorized: false } // 生产环境 (Vercel) 需要 SSL
   : false;                        // 开发环境 (本地 Docker) 不需要 SSL
 
