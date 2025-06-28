@@ -24,6 +24,11 @@ function loadEnv() {
 
 loadEnv();
 
+// 关键改动：根据环境决定 SSL 配置
+const sslConfig = process.env.NODE_ENV === 'production' 
+  ? { rejectUnauthorized: false } // 生产环境 (Vercel) 需要 SSL
+  : false;                        // 开发环境 (本地 Docker) 不需要 SSL
+
 async function testConnection() {
   const pool = new Pool({
     host: process.env.POSTGRES_HOST || process.env.PGHOST || 'localhost',
@@ -31,9 +36,7 @@ async function testConnection() {
     database: process.env.POSTGRES_DATABASE || process.env.PGDATABASE || 'neondb',
     user: process.env.POSTGRES_USER || process.env.PGUSER || 'postgres',
     password: process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD || '',
-    ssl: {
-      rejectUnauthorized: false
-    }
+    ssl: sslConfig, // <--- 应用条件化配置
   });
 
   try {
