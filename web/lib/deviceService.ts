@@ -117,6 +117,28 @@ export class DeviceService {
         }, 3, `Update device last seen: ${deviceId}`);
     }
 
+    // Record git version
+    static async recordGitVersion(deviceId: string, gitVersion: string): Promise<void> {
+        return withRetry(async () => {
+            // Check the current git_version in the git_version table for this device
+            const currentGitVersionResult = await pool.query(
+                'SELECT version FROM git_version WHERE device_id = $1 ORDER BY created_at DESC LIMIT 1',
+                [deviceId]
+            );
+
+            if (currentGitVersionResult.rows.length === 0 || currentGitVersionResult.rows[0].version !== gitVersion) {
+                // If no record exists or the git_version has changed, insert a new record
+                await pool.query(
+                    'INSERT INTO git_version (device_id, version) VALUES ($1, $2)',
+                    [deviceId, gitVersion]
+                );
+                console.log(`Git version recorded for device ${deviceId}: ${gitVersion}`);
+            } else {
+                console.log(`Git version for device ${deviceId} is already up to date: ${gitVersion}`);
+            }
+        }, 3, `Record git version for ${deviceId}`);
+    }
+
     // Get all devices
     static async getAllDevices(): Promise<Device[]> {
         return withRetry(async () => {
@@ -145,6 +167,7 @@ export class DeviceService {
             if (!deviceExists) {
                 // New device registration
                 await this.registerDevice(device_id, chip, git_version);
+                await this.recordGitVersion(device_id, git_version); // Add this line
 
                 // 尝试获取设备 profile
                 let profile = await this.getDeviceProfile(chip);
@@ -177,6 +200,7 @@ export class DeviceService {
 
                 // update git version
                 await this.updateDeviceGitVersion(device_id, git_version);
+                await this.recordGitVersion(device_id, git_version); // Add this line
 
                 return {
                     version: currentConfig.version,

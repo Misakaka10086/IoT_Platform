@@ -64,6 +64,13 @@ CREATE TABLE config_version (
   created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE (device_id, version)
 );
+-- 固件版本表
+CREATE TABLE git_version (
+  id SERIAL PRIMARY KEY,
+  device_id TEXT NOT NULL REFERENCES devices(device_id) ON DELETE CASCADE,
+  version VARCHAR(20) NOT NULL, 
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
 ### 3. 初始化数据库
