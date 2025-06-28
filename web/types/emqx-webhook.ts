@@ -46,15 +46,8 @@ export interface EmqxClientDisconnected extends EmqxWebhookBase {
 
 export type EmqxWebhookEvent = EmqxClientConnected | EmqxClientDisconnected;
 
-export interface DeviceConnectionEvent {
-    device_id: string;
-    event: 'connected' | 'disconnected';
-    timestamp: number;
-    reason?: string;
-    data?: Record<string, any>;
-}
 
-export interface EmqxMassagePublish extends EmqxWebhookBase {
+export interface EmqxMessagePublish extends EmqxWebhookBase {
     event: 'message.publish';
     clientid: string;
     username: string;
@@ -69,7 +62,7 @@ export interface EmqxMassagePublish extends EmqxWebhookBase {
  * @param obj - 需要被检查的、任何类型的对象。
  * @returns 如果对象是 EmqxMassagePublish 类型，则返回 true，否则返回 false。
  */
-export function isMessagePublishEvent(obj: any): obj is EmqxMassagePublish {
+export function isMessagePublishEvent(obj: any): obj is EmqxMessagePublish {
     // 1. 基础检查：确保 obj 是一个非 null 的对象。
     if (!obj || typeof obj !== 'object' || obj === null) {
         return false;

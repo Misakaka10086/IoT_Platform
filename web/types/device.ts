@@ -50,3 +50,6 @@ export interface DeviceStatus {
     data?: Record<string, any>;
 }
 
+export interface SetVersionRequest {
+    version: string;
+}

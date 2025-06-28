@@ -2,11 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { DeviceStatus } from '../../types/device';
-import {
-    pusherClientService,
-    DeviceStatusUpdate,
-    DeviceConnectionEvent
-} from '../services/pusherClientService';
+import { pusherClientService } from '../services/pusherClientService';
+import { DeviceStatusUpdate, DeviceConnectionEvent } from '../../types/pusher-types';
 import { usePusher } from '../context/PusherProvider';
 
 interface UseDeviceStatusReturn {

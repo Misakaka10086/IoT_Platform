@@ -1,36 +1,17 @@
 import Pusher, { Channel } from 'pusher-js';
-
-export interface PusherClientConfig {
-    key: string;
-    cluster: string;
-    forceTLS?: boolean;
-}
-
-export interface DeviceStatusUpdate {
-    device_id: string;
-    status: 'online' | 'offline';
-    timestamp: string;
-    data?: Record<string, any>;
-}
-
-export interface DeviceConnectionEvent {
-    device_id: string;
-    event_type: 'connected' | 'disconnected';
-    reason?: string;
-    timestamp: string;
-    data?: Record<string, any>;
-}
-
-export interface DeviceOTAStatusUpdate {
-    device_id: string;
-    status: string;
-}
-
-export interface DeviceOTAEvent {
-    device_id: string;
-    status: 'success' | 'error';
-
-}
+import {
+    PusherClientConfig,
+    DeviceStatusUpdate,
+    DeviceConnectionEvent,
+    DeviceOTAProgressUpdate,
+    DeviceOTAEvent,
+    PusherChannelStatus,
+    DeviceStatusUpdateHandler,
+    DeviceConnectionEventHandler,
+    DeviceOTAProgressUpdateHandler,
+    DeviceOTAEventHandler,
+    PusherErrorHandler
+} from '../../types/pusher-types';
 
 class PusherClientService {
     private pusher: Pusher | null = null;
@@ -113,8 +94,8 @@ class PusherClientService {
 
     // 订阅设备状态频道
     subscribeToDeviceStatus(
-        onStatusUpdate: (data: DeviceStatusUpdate) => void,
-        onError?: (error: any) => void
+        onStatusUpdate: DeviceStatusUpdateHandler,
+        onError?: PusherErrorHandler
     ): void {
         if (!this.pusher) {
             console.error('❌ Pusher client not initialized');
@@ -138,9 +119,9 @@ class PusherClientService {
 
     // 订阅设备事件频道
     subscribeToDeviceEvents(
-        onDeviceConnected: (data: DeviceConnectionEvent) => void,
-        onDeviceDisconnected: (data: DeviceConnectionEvent) => void,
-        onError?: (error: any) => void
+        onDeviceConnected: DeviceConnectionEventHandler,
+        onDeviceDisconnected: DeviceConnectionEventHandler,
+        onError?: PusherErrorHandler
     ): void {
         if (!this.pusher) {
             console.error('❌ Pusher client not initialized');
@@ -169,9 +150,8 @@ class PusherClientService {
 
     // 订阅设备OTA状态频道
     subscribeToDeviceOTAStatus(
-        onStatusUpdate: (data: DeviceOTAStatusUpdate) => void,
-        onError?: (error: any) => void
-
+        onStatusUpdate: DeviceOTAProgressUpdateHandler,
+        onError?: PusherErrorHandler
     ): void {
         if (!this.pusher) {
             console.error('❌ Pusher client not initialized');
@@ -180,7 +160,7 @@ class PusherClientService {
 
         this.deviceOTAProcessChannel = this.pusher.subscribe('device-ota-status');
 
-        this.deviceOTAProcessChannel.bind('progress-update', (data: DeviceOTAStatusUpdate) => {
+        this.deviceOTAProcessChannel.bind('progress-update', (data: DeviceOTAProgressUpdate) => {
             console.log('📡 Received device OTA status update:', data);
             onStatusUpdate(data);
         });
@@ -191,13 +171,13 @@ class PusherClientService {
         });
 
         console.log('📡 Subscribed to device-ota-status channel');
-
     }
+
     // 订阅设备OTA事件频道
     subscribeToDeviceOTAEvents(
-        onDeviceOTASuccess: (data: DeviceOTAEvent) => void,
-        onDeviceOTAError: (data: DeviceOTAEvent) => void,
-        onError?: (error: any) => void
+        onDeviceOTASuccess: DeviceOTAEventHandler,
+        onDeviceOTAError: DeviceOTAEventHandler,
+        onError?: PusherErrorHandler
     ): void {
         if (!this.pusher) {
             console.error('❌ Pusher client not initialized');
@@ -207,12 +187,12 @@ class PusherClientService {
         this.deviceOTAResultChannel = this.pusher.subscribe('device-ota-events');
 
         this.deviceOTAResultChannel.bind('ota-success', (data: DeviceOTAEvent) => {
-            console.log('📡 Received device ota success event:', data);
+            console.log('📡 Received device OTA success event:', data);
             onDeviceOTASuccess(data);
         });
 
         this.deviceOTAResultChannel.bind('ota-error', (data: DeviceOTAEvent) => {
-            console.log('📡 Received device ota error event:', data);
+            console.log('📡 Received device OTA error event:', data);
             onDeviceOTAError(data);
         });
 
@@ -223,10 +203,11 @@ class PusherClientService {
 
         console.log('📡 Subscribed to device-ota-events channel');
     }
+
     // 取消订阅设备状态频道
     unsubscribeFromDeviceStatus(): void {
-        if (this.deviceStatusChannel && this.pusher) {
-            this.pusher.unsubscribe('device-status');
+        if (this.deviceStatusChannel) {
+            this.pusher?.unsubscribe('device-status');
             this.deviceStatusChannel = null;
             console.log('📡 Unsubscribed from device-status channel');
         }
@@ -234,8 +215,8 @@ class PusherClientService {
 
     // 取消订阅设备事件频道
     unsubscribeFromDeviceEvents(): void {
-        if (this.deviceEventsChannel && this.pusher) {
-            this.pusher.unsubscribe('device-events');
+        if (this.deviceEventsChannel) {
+            this.pusher?.unsubscribe('device-events');
             this.deviceEventsChannel = null;
             console.log('📡 Unsubscribed from device-events channel');
         }
@@ -243,16 +224,17 @@ class PusherClientService {
 
     // 取消订阅设备OTA状态频道
     unsubscribeFromDeviceOTAStatus(): void {
-        if (this.deviceOTAProcessChannel && this.pusher) {
-            this.pusher.unsubscribe('device-ota-status');
+        if (this.deviceOTAProcessChannel) {
+            this.pusher?.unsubscribe('device-ota-status');
             this.deviceOTAProcessChannel = null;
             console.log('📡 Unsubscribed from device-ota-status channel');
         }
     }
+
     // 取消订阅设备OTA事件频道
     unsubscribeFromDeviceOTAEvents(): void {
-        if (this.deviceOTAResultChannel && this.pusher) {
-            this.pusher.unsubscribe('device-ota-events');
+        if (this.deviceOTAResultChannel) {
+            this.pusher?.unsubscribe('device-ota-events');
             this.deviceOTAResultChannel = null;
             console.log('📡 Unsubscribed from device-ota-events channel');
         }
@@ -260,11 +242,10 @@ class PusherClientService {
 
     // 获取连接状态
     getConnectionState(): string {
-        if (!this.pusher) return 'disconnected';
-        return this.pusher.connection.state;
+        return this.pusher?.connection.state || 'disconnected';
     }
 
-    // 检查是否已连接
+    // 检查客户端是否已连接
     isClientConnected(): boolean {
         return this.isConnected;
     }
@@ -274,10 +255,6 @@ class PusherClientService {
         if (this.pusher) {
             this.pusher.disconnect();
             this.pusher = null;
-            this.deviceStatusChannel = null;
-            this.deviceEventsChannel = null;
-            this.deviceOTAProcessChannel = null;
-            this.deviceOTAResultChannel = null;
             this.isConnected = false;
             console.log('📡 Pusher client disconnected');
         }
@@ -287,21 +264,17 @@ class PusherClientService {
     reconnect(): void {
         if (this.pusher) {
             this.pusher.connect();
+            console.log('📡 Pusher client reconnecting...');
         }
     }
 
     // 获取频道信息
-    getChannelInfo(): {
-        deviceStatus: boolean;
-        deviceEvents: boolean;
-        deviceOTAStatus: boolean;
-        deviceOTAEvents: boolean;
-    } {
+    getChannelInfo(): PusherChannelStatus {
         return {
             deviceStatus: !!this.deviceStatusChannel,
             deviceEvents: !!this.deviceEventsChannel,
             deviceOTAStatus: !!this.deviceOTAProcessChannel,
-            deviceOTAEvents: !!this.deviceOTAResultChannel
+            deviceOTAEvents: !!this.deviceOTAResultChannel,
         };
     }
 }

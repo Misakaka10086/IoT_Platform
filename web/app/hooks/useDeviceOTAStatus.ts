@@ -2,11 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { OTAStatus, OTAStateMap } from '../../types/ota-types';
-import {
-    pusherClientService,
-    DeviceOTAStatusUpdate,
-    DeviceOTAEvent
-} from '../services/pusherClientService';
+import { pusherClientService } from '../services/pusherClientService';
+import { DeviceOTAProgressUpdate, DeviceOTAEvent } from '../../types/pusher-types';
 import { usePusher } from '../context/PusherProvider';
 
 interface useDeviceOTAStatusReturn {
@@ -36,7 +33,7 @@ export function useDeviceOTAStatus(): useDeviceOTAStatusReturn {
 
             // Subscribe to device ota status updates
             pusherClientService.subscribeToDeviceOTAStatus(
-                (update: DeviceOTAStatusUpdate) => {
+                (update: DeviceOTAProgressUpdate) => {
                     console.log('📡 Received ota progress update:', update);
                     updateOtaStatusForDevice(update.device_id, {
                         progressStatus: update.status,

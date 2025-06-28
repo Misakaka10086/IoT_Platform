@@ -1,31 +1,11 @@
 import Pusher from 'pusher';
-
-export interface PusherEventData {
-    device_id: string;
-    timestamp: string;
-    data?: Record<string, any>;
-}
-
-export interface DeviceStatusEventData extends PusherEventData {
-    status: 'online' | 'offline';
-}
-
-export interface DeviceConnectionEventData extends PusherEventData {
-    event_type: 'connected' | 'disconnected';
-    reason?: string;
-}
-
-export interface DeviceOTAProgressUpdateData {
-    device_id: string;
-    status: string;
-}
-
-export interface DeviceOTAResultData {
-    device_id: string;
-    status: 'success' | 'error';
-
-}
-
+import {
+    DeviceStatusUpdate,
+    DeviceConnectionEvent,
+    DeviceOTAProgressUpdate,
+    DeviceOTAEvent,
+    PusherServiceResponse
+} from '../../types/pusher-types';
 
 class PusherService {
     private pusher: Pusher;
@@ -45,7 +25,7 @@ class PusherService {
     // 触发设备状态更新事件
     async triggerDeviceStatusUpdate(deviceId: string, status: 'online' | 'offline', data?: Record<string, any>): Promise<void> {
         try {
-            const eventData: DeviceStatusEventData = {
+            const eventData: DeviceStatusUpdate = {
                 device_id: deviceId,
                 status,
                 timestamp: new Date().toISOString(),
@@ -64,7 +44,7 @@ class PusherService {
     // 触发设备连接事件
     async triggerDeviceConnected(deviceId: string, data: Record<string, any>): Promise<void> {
         try {
-            const eventData: DeviceConnectionEventData = {
+            const eventData: DeviceConnectionEvent = {
                 device_id: deviceId,
                 event_type: 'connected',
                 timestamp: new Date().toISOString(),
@@ -83,7 +63,7 @@ class PusherService {
     // 触发设备断开事件
     async triggerDeviceDisconnected(deviceId: string, reason: string, data: Record<string, any>): Promise<void> {
         try {
-            const eventData: DeviceConnectionEventData = {
+            const eventData: DeviceConnectionEvent = {
                 device_id: deviceId,
                 event_type: 'disconnected',
                 reason,
@@ -115,12 +95,14 @@ class PusherService {
             throw error;
         }
     }
+
     // 触发OTA进度更新
     async triggerDeviceOTAProgressUpdate(deviceId: string, status: string): Promise<void> {
         try {
-            const eventData: DeviceOTAProgressUpdateData = {
+            const eventData: DeviceOTAProgressUpdate = {
                 device_id: deviceId,
-                status
+                status,
+                timestamp: new Date().toISOString()
             };
 
             await this.pusher.trigger('device-ota-status', 'progress-update', eventData);
@@ -131,12 +113,14 @@ class PusherService {
             throw error;
         }
     }
+
     // 触发OTA结果更新成功
     async triggerDeviceOTASuccess(deviceId: string): Promise<void> {
         try {
-            const eventData: DeviceOTAResultData = {
+            const eventData: DeviceOTAEvent = {
                 device_id: deviceId,
-                status: "success"
+                status: "success",
+                timestamp: new Date().toISOString()
             };
 
             await this.pusher.trigger('device-ota-events', 'ota-success', eventData);
@@ -147,12 +131,14 @@ class PusherService {
             throw error;
         }
     }
+
     // 触发OTA结果更新失败
     async triggerDeviceOTAError(deviceId: string): Promise<void> {
         try {
-            const eventData: DeviceOTAResultData = {
+            const eventData: DeviceOTAEvent = {
                 device_id: deviceId,
-                status: "error"
+                status: "error",
+                timestamp: new Date().toISOString()
             };
 
             await this.pusher.trigger('device-ota-events', 'ota-error', eventData);
@@ -163,6 +149,7 @@ class PusherService {
             throw error;
         }
     }
+
     // 获取应用信息
     async getAppInfo(): Promise<any> {
         try {

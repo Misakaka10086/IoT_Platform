@@ -1,16 +1,10 @@
 import pool from '../../lib/database';
 import { DeviceStatus } from '../../types/device';
-
-export interface DeviceStatusUpdate {
-    device_id: string;
-    status: 'online' | 'offline';
-    last_seen: Date;
-    data?: Record<string, any>;
-}
+import { DatabaseDeviceStatusUpdate } from '../../types/pusher-types';
 
 class DatabaseService {
     // 更新设备状态
-    async updateDeviceStatus(update: DeviceStatusUpdate): Promise<void> {
+    async updateDeviceStatus(update: DatabaseDeviceStatusUpdate): Promise<void> {
         const client = await pool.connect();
 
         try {
@@ -31,7 +25,7 @@ class DatabaseService {
     }
 
     // 批量更新设备状态
-    async batchUpdateDeviceStatus(updates: DeviceStatusUpdate[]): Promise<void> {
+    async batchUpdateDeviceStatus(updates: DatabaseDeviceStatusUpdate[]): Promise<void> {
         const client = await pool.connect();
 
         try {

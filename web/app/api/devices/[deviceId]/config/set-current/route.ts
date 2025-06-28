@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool, { withRetry } from '../../../../../../lib/database';
-
-// 定义请求体的类型接口，确保类型安全
-interface SetCurrentVersionRequestBody {
-    version: string;
-}
+import { SetVersionRequest } from '../../../../../../types/device';
 
 export async function PUT(
     request: NextRequest,
@@ -20,7 +16,7 @@ export async function PUT(
 
     try {
         // 1. 解析请求体
-        const body: SetCurrentVersionRequestBody = await request.json();
+        const body: SetVersionRequest = await request.json();
         const { version } = body;
 
         // 2. 验证输入

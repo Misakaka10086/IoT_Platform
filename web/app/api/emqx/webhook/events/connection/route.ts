@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { EmqxWebhookEvent, DeviceConnectionEvent, EmqxMassagePublish } from '../../../../../../types/emqx-webhook';
-import { databaseService, DeviceStatusUpdate } from '../../../../../services/databaseService';
+import { EmqxWebhookEvent, EmqxMessagePublish } from '../../../../../../types/emqx-webhook';
+import { DeviceConnectionEvent } from '../../../../../../types/pusher-types';
+import { databaseService } from '../../../../../services/databaseService';
+import { DatabaseDeviceStatusUpdate } from '../../../../../../types/pusher-types';
 import { pusherService } from '../../../../../services/pusherService';
 
 export async function POST(request: NextRequest) {
@@ -45,8 +47,8 @@ export async function POST(request: NextRequest) {
         // Create device connection event
         const deviceEvent: DeviceConnectionEvent = {
             device_id: deviceId,
-            event: isConnected ? 'connected' : 'disconnected',
-            timestamp: webhookEvent.timestamp,
+            event_type: isConnected ? 'connected' : 'disconnected',
+            timestamp: new Date().toISOString(),
             reason: !isConnected ? (webhookEvent as any).reason : undefined,
             data: {
                 username: webhookEvent.username,
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
         console.log('📱 Processing device event:', deviceEvent);
 
         // Update database
-        const statusUpdate: DeviceStatusUpdate = {
+        const statusUpdate: DatabaseDeviceStatusUpdate = {
             device_id: deviceId,
             status,
             last_seen: new Date(),

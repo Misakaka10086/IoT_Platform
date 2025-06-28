@@ -1,15 +1,15 @@
 // 定义一个包含所有合法OTA状态的联合类型
-export type OtaStatusValue = "OTA Progress" | "OTA Success" | "OTA Error";
+export type OTAStatusValue = "OTA Progress" | "OTA Success" | "OTA Error";
 // 定义一个包含所有合法状态值的常量数组，便于在运行时检查
-const VALID_OTA_STATUSES: OtaStatusValue[] = ["OTA Progress", "OTA Success", "OTA Error"];
+const VALID_OTA_STATUSES: OTAStatusValue[] = ["OTA Progress", "OTA Success", "OTA Error"];
 // 定义设备发送的OTA payload 基础的结构
-export interface OtaPayloadBase {
+export interface OTAPayloadBase {
     id: string;
-    status: OtaStatusValue; // ⬅️ 使用我们定义的联合类型
+    status: OTAStatusValue; // ⬅️ 使用我们定义的联合类型
     progress: number;
 }
 // 定义设备发送的OTA payload的结构
-export interface OtaPayload extends OtaPayloadBase {
+export interface OTAPayload extends OTAPayloadBase {
     chip: string;
     git_version: string;
     config_version: string;
@@ -23,7 +23,7 @@ export interface OtaPayload extends OtaPayloadBase {
  * @param obj - 待检查的任意对象。
  * @returns 如果对象是OtaPayload类型，则返回true，否则返回false。
  */
-export function isValidOtaPayload(obj: any): obj is OtaPayload {
+export function isValidOTAPayload(obj: any): obj is OTAPayload {
     // 1. 检查obj是否存在且是一个对象
     if (!obj || typeof obj !== 'object') {
         return false;
@@ -64,7 +64,7 @@ export function isValidOtaPayload(obj: any): obj is OtaPayload {
     return true;
 }
 
-export function isValidOtaPayloadBase(obj: any): obj is OtaPayloadBase {
+export function isValidOTAPayloadBase(obj: any): obj is OTAPayloadBase {
     // 1. 确保 obj 是一个非null的对象
     if (!obj || typeof obj !== 'object') {
         return false;
