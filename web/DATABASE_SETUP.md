@@ -28,7 +28,7 @@ CREATE TABLE devices (
   id SERIAL PRIMARY KEY,
   device_id TEXT UNIQUE NOT NULL,           -- 设备唯一标识（如MAC或SN）
   chip TEXT NOT NULL,                       -- 设备型号
-  git_version VARCHAR(20) NOT NULL,         -- git版本号
+  git_version VARCHAR(40) NOT NULL,         -- git版本号
   registered_at TIMESTAMPTZ DEFAULT now(),  -- 注册时间
   last_seen TIMESTAMPTZ,                    -- 最近上线时间
   online BOOLEAN DEFAULT FALSE,             -- 在线状态
@@ -59,7 +59,7 @@ CREATE TABLE config_version (
   id SERIAL PRIMARY KEY,
   device_id TEXT NOT NULL REFERENCES devices(device_id) ON DELETE CASCADE,
   version TEXT NOT NULL,                         -- 使用时间戳格式版本号
-  git_version VARCHAR(20) NOT NULL, 
+  git_version VARCHAR(40) NOT NULL, 
   config JSONB NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE (device_id, version)
@@ -68,9 +68,16 @@ CREATE TABLE config_version (
 CREATE TABLE git_version (
   id SERIAL PRIMARY KEY,
   device_id TEXT NOT NULL REFERENCES devices(device_id) ON DELETE CASCADE,
-  version VARCHAR(20) NOT NULL, 
+  version VARCHAR(40) NOT NULL, 
   created_at TIMESTAMPTZ DEFAULT now()
 );
+-- github固件信息表
+CREATE TABLE git_info (
+  version CHAR(40) PRIMARY KEY,             -- Git 提交哈希
+  message TEXT NOT NULL,                    -- 提交信息
+  authored_at TIMESTAMPTZ                   -- 提交时间（含时区更保险）
+);
+
 ```
 
 ### 3. 初始化数据库

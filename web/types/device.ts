@@ -8,6 +8,15 @@ export interface Device {
     description: string | null;
 }
 
+export interface DeviceInfo extends Device {
+    online: boolean;
+}
+export interface GitVersion {
+    id: number;
+    device_id: string;
+    version: string;
+    created_at: string;
+}
 export interface DeviceProfile {
     id: number;
     model: string;

@@ -5,9 +5,11 @@ import { Box, Tabs, Tab, Typography, Paper } from "@mui/material";
 import {
   Devices as DevicesIcon,
   Memory as ProfilesIcon,
+  History as HistoryIcon,
 } from "@mui/icons-material";
 import DevicesTab from "./components/DevicesTab";
 import ProfilesTab from "./components/ProfilesTab";
+import FirmwareVersionsTab from "./components/FirmwareVersionsTab";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -68,6 +70,12 @@ export default function ManagementPage() {
           iconPosition="start"
           {...a11yProps(1)}
         />
+        <Tab
+          label="Firmware Versions"
+          icon={<HistoryIcon />}
+          iconPosition="start"
+          {...a11yProps(2)}
+        />
       </Tabs>
 
       <TabPanel value={tabValue} index={0}>
@@ -76,6 +84,10 @@ export default function ManagementPage() {
 
       <TabPanel value={tabValue} index={1}>
         <ProfilesTab />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={2}>
+        <FirmwareVersionsTab />
       </TabPanel>
     </Box>
   );
