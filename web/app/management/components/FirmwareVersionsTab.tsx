@@ -1,3 +1,5 @@
+// web/app/management/components/FirmwareVersionsTab.tsx
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -12,10 +14,17 @@ import {
   Paper,
   Alert,
   Button,
+  CircularProgress,
 } from "@mui/material";
-import { Refresh as RefreshIcon } from "@mui/icons-material";
+import {
+  Refresh as RefreshIcon,
+  GitHub as GitHubIcon,
+  CalendarToday as CalendarIcon,
+  LocalOffer,
+} from "@mui/icons-material";
 import PinwheelLoader from "../../components/PinwheelLoader";
 import { DeviceInfo, GitVersion } from "../../../types/device";
+import { GitCommitInfo } from "../../../types/ota-types";
 
 export default function FirmwareVersionsTab() {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
@@ -23,6 +32,12 @@ export default function FirmwareVersionsTab() {
   const [firmwareVersions, setFirmwareVersions] = useState<GitVersion[]>([]);
   const [selectedFirmwareVersion, setSelectedFirmwareVersion] =
     useState<GitVersion | null>(null);
+
+  // New states for commit info
+  const [commitInfo, setCommitInfo] = useState<GitCommitInfo | null>(null);
+  const [commitLoading, setCommitLoading] = useState(false);
+  const [commitError, setCommitError] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,17 +45,43 @@ export default function FirmwareVersionsTab() {
     loadDevices();
   }, []);
 
+  // Effect to load firmware versions when a device is selected
   useEffect(() => {
-    // When the device changes, reset the selected firmware version to avoid stale selections.
     setSelectedFirmwareVersion(null);
-
     if (selectedDeviceId) {
       loadFirmwareVersions(selectedDeviceId);
     } else {
-      // If no device is selected, also clear the list of versions.
       setFirmwareVersions([]);
     }
   }, [selectedDeviceId]);
+
+  // Effect to load commit info when a firmware version is selected
+  useEffect(() => {
+    setCommitInfo(null);
+    setCommitError(null);
+
+    if (selectedFirmwareVersion) {
+      const fetchCommitInfo = async () => {
+        setCommitLoading(true);
+        try {
+          const response = await fetch(
+            `/api/git/info/${selectedFirmwareVersion.version}`
+          );
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || `Error ${response.status}`);
+          }
+          const data: GitCommitInfo = await response.json();
+          setCommitInfo(data);
+        } catch (err: any) {
+          setCommitError(err.message || "Failed to fetch commit details.");
+        } finally {
+          setCommitLoading(false);
+        }
+      };
+      fetchCommitInfo();
+    }
+  }, [selectedFirmwareVersion]);
 
   const loadDevices = async () => {
     try {
@@ -69,7 +110,6 @@ export default function FirmwareVersionsTab() {
       );
       if (response.ok) {
         const data = await response.json();
-        // Sort by created_at in descending order (newest first)
         const sortedVersions = (data.firmwareVersions || []).sort(
           (a: GitVersion, b: GitVersion) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -139,14 +179,15 @@ export default function FirmwareVersionsTab() {
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
+          {" "}
+          {error}{" "}
         </Alert>
       )}
 
-      {/* Device Selection */}
       <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
-          1. Select Device
+          {" "}
+          1. Select Device{" "}
         </Typography>
         <FormControl fullWidth>
           <InputLabel id="device-select-label">Device</InputLabel>
@@ -169,10 +210,10 @@ export default function FirmwareVersionsTab() {
         </FormControl>
       </Paper>
 
-      {/* Firmware Version Selection */}
       <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
-          2. Firmware Versions
+          {" "}
+          2. Firmware Versions{" "}
         </Typography>
         {selectedDeviceId ? (
           firmwareVersions.length > 0 ? (
@@ -180,7 +221,7 @@ export default function FirmwareVersionsTab() {
               {firmwareVersions.map((version) => (
                 <Chip
                   key={version.id}
-                  label={version.version}
+                  label={version.version.substring(0, 6)}
                   onClick={() => handleChipClick(version)}
                   color={
                     selectedFirmwareVersion?.id === version.id
@@ -192,34 +233,68 @@ export default function FirmwareVersionsTab() {
                       ? "filled"
                       : "outlined"
                   }
+                  icon={<GitHubIcon />}
                 />
               ))}
             </Box>
           ) : (
             <Typography variant="body2" color="text.secondary">
-              No firmware versions found for this device.
+              {" "}
+              No firmware versions found for this device.{" "}
             </Typography>
           )
         ) : (
           <Typography variant="body2" color="text.secondary">
-            Please select a device to view its firmware versions.
+            {" "}
+            Please select a device to view its firmware versions.{" "}
           </Typography>
         )}
       </Paper>
 
-      {/* Firmware Update Time Display */}
       <Paper elevation={1} sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
-          3. Firmware Update Time
+          {" "}
+          3. Commit Details{" "}
         </Typography>
-        {selectedFirmwareVersion ? (
-          <Typography variant="body1">
-            Updated on:{" "}
-            <strong>{formatDate(selectedFirmwareVersion.created_at)}</strong>
-          </Typography>
+        {commitLoading ? (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <CircularProgress size={24} />
+            <Typography variant="body2" color="text.secondary">
+              Loading commit info...
+            </Typography>
+          </Box>
+        ) : commitError ? (
+          <Alert severity="warning">{commitError}</Alert>
+        ) : commitInfo ? (
+          <Box>
+            <Box
+              component="pre"
+              sx={{
+                bgcolor: "action.hover",
+                p: 2,
+                borderRadius: 1,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+              }}
+            >
+              {commitInfo.message}
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
+              <CalendarIcon fontSize="small" color="action" />
+              <Typography variant="caption" color="text.secondary">
+                Authored on: {formatDate(commitInfo.authored_at)}
+              </Typography>
+              <LocalOffer fontSize="small" color="action" />
+              <Typography variant="caption" color="text.secondary">
+                SHA: {commitInfo.version}
+              </Typography>
+            </Box>
+          </Box>
         ) : (
           <Typography variant="body2" color="text.secondary">
-            Select a firmware version above to see its update time.
+            Select a firmware version above to see its commit details.
           </Typography>
         )}
       </Paper>

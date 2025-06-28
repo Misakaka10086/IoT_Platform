@@ -6,7 +6,7 @@ import { CssBaseline, Box, Container } from "@mui/material";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { PusherProvider } from "./context/PusherProvider";
-
+import "../lib/startup";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {

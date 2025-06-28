@@ -13,8 +13,8 @@ const pool = new Pool({
     // Connection pool settings
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 3000, // 连接超时设置为3秒
-    statement_timeout: 3000, // 查询超时设置为3秒
+    connectionTimeoutMillis: 10000, // 连接超时设置为10秒
+    statement_timeout: 10000, // 查询超时设置为10秒
 });
 
 // Test database connection

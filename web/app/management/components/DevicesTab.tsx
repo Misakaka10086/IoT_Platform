@@ -243,21 +243,33 @@ export default function DevicesTab() {
           <Table sx={{ minWidth: 650 }} aria-label="devices table">
             <TableHead>
               <TableRow>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Device ID</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Chip</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Git Version</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Status</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Last Seen</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Registered</TableCell>
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>Description</TableCell>
-                <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>Actions</TableCell>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>Device ID</TableCell>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>Chip</TableCell>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>Git Version</TableCell>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>Status</TableCell>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>Last Seen</TableCell>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>Registered</TableCell>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>Description</TableCell>
+                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {devices.map((device) => (
                 <TableRow key={device.id}>
                   <TableCell>
-                    <Typography variant="body2" fontFamily="monospace" sx={{ display: 'block', maxWidth: 150 , overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <Typography
+                      variant="body2"
+                      fontFamily="monospace"
+                      sx={{
+                        display: "block",
+                        maxWidth: 150,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {device.device_id}
                     </Typography>
                   </TableCell>
@@ -270,7 +282,7 @@ export default function DevicesTab() {
                       fontFamily="monospace"
                       color="text.secondary"
                     >
-                      {device.git_version}
+                      {device.git_version.substring(0, 6)}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -282,18 +294,28 @@ export default function DevicesTab() {
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                    <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
                       {formatDate(device.last_seen)}
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                    <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
                       {formatDate(device.registered_at)}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: 'block', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          display: "block",
+                          maxWidth: 200,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {device.description || "-"}
                       </Typography>
                       <Tooltip title="Edit Description">

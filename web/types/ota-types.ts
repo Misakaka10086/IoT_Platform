@@ -109,3 +109,14 @@ export interface OTAStatus {
 // 用一个字典来存储所有设备的OTA状态
 // key 是 device_id, value 是该设备的OTA状态
 export type OTAStateMap = Record<string, OTAStatus | undefined>;
+
+// ============================================================================
+// Git Commit Information Types
+// ============================================================================
+
+/** Represents a single commit's information, typically stored in the git_info table. */
+export interface GitCommitInfo {
+    version: string;     // The 40-character commit SHA
+    message: string;
+    authored_at: string; // ISO 8601 date string
+}
