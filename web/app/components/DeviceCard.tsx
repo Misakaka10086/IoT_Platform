@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -12,7 +12,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  CircularProgress,
+  LinearProgress,
 } from "@mui/material";
 import {
   Memory as ChipIcon,
@@ -55,15 +55,26 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 }) => {
   const muiTheme = useMuiTheme();
   const isOnline = device.status === "online";
+  const [currentOtaStatus, setCurrentOtaStatus] = useState<OTAStatus | null>(
+    otaStatus || null
+  );
 
+  useEffect(() => {
+    setCurrentOtaStatus(otaStatus || null);
+  }, [otaStatus]);
+
+  const handleOtaStatusClick = () => {
+    setCurrentOtaStatus(null);
+  };
   // 👈 4. 新增的OTA渲染逻辑
   const renderOtaInfo = () => {
-    if (!otaStatus) return null; // 如果没有OTA状态，不渲染任何东西
+    if (!currentOtaStatus) return null; // 如果没有OTA状态，不渲染任何东西
 
     // 如果OTA有最终结果
-    if (otaStatus.result) {
+    if (currentOtaStatus.result) {
       return (
         <Box
+          onClick={handleOtaStatusClick}
           sx={{
             display: "flex",
             alignItems: "center",
@@ -72,39 +83,37 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             p: 1,
             borderRadius: 1,
             bgcolor:
-              otaStatus.result === "success" ? "success.light" : "error.light",
+              currentOtaStatus.result === "success"
+                ? "success.light"
+                : "error.light",
+            cursor: "pointer",
+            transition: "all 0.25s ease-in-out",
+            "&:hover": {
+              transform: "scale(1.05)",
+              boxShadow: `0 10px 20px rgba(0,0,0,0.2)`,
+            },
           }}
         >
-          {otaStatus.result === "success" ? (
+          {currentOtaStatus.result === "success" ? (
             <CheckCircleOutline color="success" />
           ) : (
             <ErrorOutline color="error" />
           )}
           <Typography variant="body2" color="text.primary">
-            OTA {otaStatus.result}
+            OTA {currentOtaStatus.result}
           </Typography>
         </Box>
       );
     }
 
     // 如果OTA正在进行中
-    if (otaStatus.progressStatus) {
+    if (currentOtaStatus.progressStatus) {
       return (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            mt: 1,
-            p: 1,
-            borderRadius: 1,
-            bgcolor: "info.light",
-          }}
-        >
-          <CircularProgress size={20} />
-          <Typography variant="body2" color="text.primary">
-            {otaStatus.progressStatus}
-          </Typography>
+        <Box>
+          <LinearProgress
+            variant="determinate"
+            value={Number(currentOtaStatus.progressStatus)}
+          />
         </Box>
       );
     }
