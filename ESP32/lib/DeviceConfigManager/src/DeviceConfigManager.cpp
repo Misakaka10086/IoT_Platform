@@ -6,40 +6,42 @@ DeviceConfigManager::DeviceConfigManager()
       configLoaded(false), wifiConnected(false) {
   deviceId = getDeviceId();
   chipType = getChipType();
+  boardType = getBoardType();
   gitVersion = getGitVersion();
   wifiSsid = WIFI_SSID;
   wifiPassword = WIFI_PASSWORD;
 }
 
-DeviceConfigManager::DeviceConfigManager(const String &host)
-    : serverHost(host), serverPort(80), useCustomPort(false),
-      configLoaded(false), wifiConnected(false) {
-  deviceId = getDeviceId();
-  chipType = getChipType();
-  gitVersion = getGitVersion();
-  wifiSsid = WIFI_SSID;
-  wifiPassword = WIFI_PASSWORD;
-}
+// DeviceConfigManager::DeviceConfigManager(const String &host)
+//     : serverHost(host), serverPort(80), useCustomPort(false),
+//       configLoaded(false), wifiConnected(false) {
+//   deviceId = getDeviceId();
+//   chipType = getChipType();
+//   gitVersion = getGitVersion();
+//   wifiSsid = WIFI_SSID;
+//   wifiPassword = WIFI_PASSWORD;
+// }
 
-DeviceConfigManager::DeviceConfigManager(const String &host, int port)
-    : serverHost(host), serverPort(port), useCustomPort(true),
-      configLoaded(false), wifiConnected(false) {
-  deviceId = getDeviceId();
-  chipType = getChipType();
-  gitVersion = getGitVersion();
-  wifiSsid = WIFI_SSID;
-  wifiPassword = WIFI_PASSWORD;
-}
+// DeviceConfigManager::DeviceConfigManager(const String &host, int port)
+//     : serverHost(host), serverPort(port), useCustomPort(true),
+//       configLoaded(false), wifiConnected(false) {
+//   deviceId = getDeviceId();
+//   chipType = getChipType();
+//   gitVersion = getGitVersion();
+//   wifiSsid = WIFI_SSID;
+//   wifiPassword = WIFI_PASSWORD;
+// }
 
-DeviceConfigManager::DeviceConfigManager(const String &host, int port,
-                                         const String &ssid,
-                                         const String &password)
-    : serverHost(host), serverPort(port), useCustomPort(true), wifiSsid(ssid),
-      wifiPassword(password), configLoaded(false), wifiConnected(false) {
-  deviceId = getDeviceId();
-  chipType = getChipType();
-  gitVersion = getGitVersion();
-}
+// DeviceConfigManager::DeviceConfigManager(const String &host, int port,
+//                                          const String &ssid,
+//                                          const String &password)
+//     : serverHost(host), serverPort(port), useCustomPort(true),
+//     wifiSsid(ssid),
+//       wifiPassword(password), configLoaded(false), wifiConnected(false) {
+//   deviceId = getDeviceId();
+//   chipType = getChipType();
+//   gitVersion = getGitVersion();
+// }
 
 String DeviceConfigManager::getDeviceId() {
   // Use ESP32's unique MAC address as device ID
@@ -51,6 +53,14 @@ String DeviceConfigManager::getDeviceId() {
 }
 
 String DeviceConfigManager::getChipType() { return ESP.getChipModel(); }
+
+String DeviceConfigManager::getBoardType() {
+#ifdef PLATFORMIO_BOARD_NAME
+  return PLATFORMIO_BOARD_NAME;
+#else
+  return "unknown";
+#endif
+}
 
 String DeviceConfigManager::getGitVersion() {
 #ifdef GIT_VERSION
@@ -122,6 +132,7 @@ bool DeviceConfigManager::loadDeviceConfig() {
   JsonDocument requestDoc;
   requestDoc["device_id"] = deviceId;
   requestDoc["chip"] = chipType;
+  requestDoc["board"] = boardType;
   requestDoc["git_version"] = gitVersion;
   String requestBody = requestDoc.as<String>();
   Serial.printf("[ConfigManager] Request body: %s\n", requestBody.c_str());

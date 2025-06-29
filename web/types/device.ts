@@ -44,6 +44,7 @@ export interface DeviceConfig {
 export interface DeviceRegistrationRequest {
     device_id: string;
     chip: string;
+    board: string;
     git_version: string;
 }
 

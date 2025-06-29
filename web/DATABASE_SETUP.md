@@ -27,7 +27,8 @@ NODE_ENV=development
 CREATE TABLE devices (
   id SERIAL PRIMARY KEY,
   device_id TEXT UNIQUE NOT NULL,           -- 设备唯一标识（如MAC或SN）
-  chip TEXT NOT NULL,                       -- 设备型号
+  chip VARCHAR(255) NOT NULL,               -- 主控型号
+  board VARCHAR(255) NOT NULL,              -- 开发板型号型号
   git_version VARCHAR(40) NOT NULL,         -- git版本号
   registered_at TIMESTAMPTZ DEFAULT now(),  -- 注册时间
   last_seen TIMESTAMPTZ,                    -- 最近上线时间

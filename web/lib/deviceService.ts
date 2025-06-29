@@ -32,11 +32,11 @@ export class DeviceService {
     }
 
     // Register new device
-    static async registerDevice(deviceId: string, chip: string, gitVersion: string): Promise<Device> {
+    static async registerDevice(deviceId: string, chip: string, board: string, gitVersion: string): Promise<Device> {
         return withRetry(async () => {
             const result = await pool.query(
-                'INSERT INTO devices (device_id, chip, git_version) VALUES ($1, $2, $3) RETURNING *',
-                [deviceId, chip, gitVersion]
+                'INSERT INTO devices (device_id, chip, board, git_version) VALUES ($1, $2, $3, $4) RETURNING *',
+                [deviceId, chip, board, gitVersion]
             );
             return result.rows[0];
         }, 3, `Register device: ${deviceId}`);
@@ -156,7 +156,7 @@ export class DeviceService {
     // Handle device registration (new or existing)
     static async handleDeviceRegistration(request: DeviceRegistrationRequest): Promise<DeviceRegistrationResponse> {
         return withRetry(async () => {
-            const { device_id, chip, git_version } = request;
+            const { device_id, chip, board, git_version } = request;
 
             // Update last seen for all devices
             await this.updateDeviceLastSeen(device_id);
@@ -166,7 +166,7 @@ export class DeviceService {
 
             if (!deviceExists) {
                 // New device registration
-                await this.registerDevice(device_id, chip, git_version);
+                await this.registerDevice(device_id, chip, board, git_version);
                 await this.recordGitVersion(device_id, git_version); // Add this line
 
                 // 尝试获取设备 profile
