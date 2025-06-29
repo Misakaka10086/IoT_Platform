@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
+    "dev": "echo NEXT_PUBLIC_GIT_SHA=$(git rev-parse --short HEAD) > .env.local && next dev --turbopack",
+    "build": "echo NEXT_PUBLIC_GIT_SHA=$(git rev-parse --short HEAD) > .env.production && next build",
     "start": "next start",
     "lint": "next lint"
   },
