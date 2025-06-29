@@ -21,12 +21,14 @@ import {
   Info as InfoIcon,
   SignalWifi4Bar as OnlineIcon,
   SignalWifiOff as OfflineIcon,
+  DeveloperBoard as DeveloperBoardIcon,
 } from "@mui/icons-material";
 
 interface Device {
   id: number;
   device_id: string;
   chip: string;
+  board: string;
   git_version: string;
   registered_at: string;
   last_seen: string | null;
@@ -125,6 +127,12 @@ export const DeviceCardMobile: React.FC<DeviceCardMobileProps> = ({
               <ChipIconMui fontSize="small" color="action" />
               <Typography variant="body2" color="text.secondary">
                 Chip: <strong>{device.chip}</strong>
+              </Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <DeveloperBoardIcon fontSize="small" color="action" />
+              <Typography variant="body2" color="text.secondary">
+                Board: <strong>{device.board}</strong>
               </Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>

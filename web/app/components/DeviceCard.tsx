@@ -23,6 +23,7 @@ import {
   CheckCircleOutline,
   ErrorOutline,
 } from "@mui/icons-material";
+import DeveloperBoardIcon from "@mui/icons-material/DeveloperBoard";
 import { keyframes } from "@emotion/react";
 import { DeviceStatus } from "../../types/device";
 import { OTAStatus } from "../../types/ota-types";
@@ -196,6 +197,12 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <ChipIcon sx={{ color: "text.secondary" }} />
               <Typography variant="body2" color="text.secondary">
                 Chip: <strong>{device.data?.chip || "Unknown"}</strong>
+              </Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <DeveloperBoardIcon sx={{ color: "text.secondary" }} />
+              <Typography variant="body2" color="text.secondary">
+                Board: <strong>{device.data?.board || "Unknown"}</strong>
               </Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>

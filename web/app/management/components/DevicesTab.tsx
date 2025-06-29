@@ -40,6 +40,7 @@ interface Device {
   id: number;
   device_id: string;
   chip: string;
+  board: string;
   git_version: string;
   registered_at: string;
   last_seen: string | null;
@@ -245,6 +246,7 @@ export default function DevicesTab() {
               <TableRow>
                 <TableCell sx={{ whiteSpace: "nowrap" }}>Device ID</TableCell>
                 <TableCell sx={{ whiteSpace: "nowrap" }}>Chip</TableCell>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>Board</TableCell>
                 <TableCell sx={{ whiteSpace: "nowrap" }}>Git Version</TableCell>
                 <TableCell sx={{ whiteSpace: "nowrap" }}>Status</TableCell>
                 <TableCell sx={{ whiteSpace: "nowrap" }}>Last Seen</TableCell>
@@ -275,6 +277,9 @@ export default function DevicesTab() {
                   </TableCell>
                   <TableCell>
                     <Chip label={device.chip} size="small" />
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={device.board} size="small" />
                   </TableCell>
                   <TableCell>
                     <Typography

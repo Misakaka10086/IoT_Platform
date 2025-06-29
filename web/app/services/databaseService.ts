@@ -57,7 +57,7 @@ class DatabaseService {
 
         try {
             const result = await client.query(
-                `SELECT device_id, chip, git_version, online, last_seen, description 
+                `SELECT device_id, chip,board, git_version, online, last_seen, description 
                  FROM devices 
                  ORDER BY last_seen DESC NULLS LAST`
             );
@@ -68,6 +68,7 @@ class DatabaseService {
                 last_seen: row.last_seen ? row.last_seen.toISOString() : null,
                 data: {
                     chip: row.chip,
+                    board: row.board,
                     git_version: row.git_version,
                     description: row.description
                 }
@@ -86,7 +87,7 @@ class DatabaseService {
 
         try {
             const result = await client.query(
-                `SELECT device_id, chip, git_version, online, last_seen, description 
+                `SELECT device_id, chip, board, git_version, online, last_seen, description 
                  FROM devices 
                  WHERE device_id = $1`,
                 [deviceId]
@@ -103,6 +104,7 @@ class DatabaseService {
                 last_seen: row.last_seen ? row.last_seen.toISOString() : null,
                 data: {
                     chip: row.chip,
+                    board: row.board,
                     git_version: row.git_version,
                     description: row.description
                 }
