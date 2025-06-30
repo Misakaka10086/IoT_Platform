@@ -52,7 +52,8 @@ export async function GET(request: NextRequest) {
                             firmwareInfo: [],
                         };
                     }
-                    groupedData[commitSha].boards.add(board);
+                    // TO DO: 需要搞明白这里的Set<string>的含义
+                    (groupedData[commitSha].boards as Set<string>).add(board);
                     groupedData[commitSha].firmwareInfo.push({
                         key: item.Key,
                         board,
