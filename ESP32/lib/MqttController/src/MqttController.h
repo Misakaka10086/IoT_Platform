@@ -7,7 +7,7 @@
 #include <AsyncMqttClient.h>
 #include <WiFi.h>
 
-typedef void (*CommandCallback)(const char *commandPayload);
+typedef void (*CommandCallback)(const char *topic, const char *commandPayload);
 typedef void (*MqttConnectCallback)(bool sessionPresent);
 
 class MqttController {

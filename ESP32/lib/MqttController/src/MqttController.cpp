@@ -65,8 +65,12 @@ void MqttController::connectToMqtt() {
 
 void MqttController::onMqttConnect(bool sessionPresent) {
   DEBUG_PRINTLN("Connected to MQTT.");
-  uint16_t packetIdSub = _mqttClient.subscribe(MQTT_TOPIC_COMMAND, 2);
-  DEBUG_PRINTF("Subscribing to %s...\n", MQTT_TOPIC_COMMAND);
+  uint16_t packetIdSub1 = _mqttClient.subscribe(MQTT_TOPIC_COMMAND, 2);
+  DEBUG_PRINTF("Subscribing to %s\n", MQTT_TOPIC_COMMAND);
+  uint16_t packetIdSub2 =
+      _mqttClient.subscribe(MQTT_TOPIC_COMMAND "/" PLATFORMIO_BOARD_NAME, 2);
+  DEBUG_PRINTF("Subscribing to %s\n",
+               MQTT_TOPIC_COMMAND "/" PLATFORMIO_BOARD_NAME);
 
   // Call user-provided custom callback if it exists
   if (_connectCallback != nullptr) {
@@ -124,7 +128,7 @@ void MqttController::onMqttMessage(char *topic, char *payload,
   DEBUG_PRINTF("Message received on topic %s: %s\n", topic, message);
 
   if (_commandCallback != nullptr) {
-    _commandCallback(message); // 直接传递整个 payload
+    _commandCallback(topic, message); // 传递 topic 和 payload
   }
 }
 
