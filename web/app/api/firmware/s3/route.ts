@@ -4,6 +4,7 @@ import {
   ListObjectsV2Command,
   HeadObjectCommand,
 } from "@aws-sdk/client-s3";
+import { NodeHttpHandler } from "@aws-sdk/node-http-handler"; // Import NodeHttpHandler
 
 export interface FirmwareS3Info {
   s3Key: string;
@@ -64,9 +65,12 @@ export async function GET() {
       accessKeyId: B2_ACCESS_KEY_ID,
       secretAccessKey: B2_SECRET_ACCESS_KEY,
     },
-    // Consider adding requestTimeout for more granular control if needed, though SDK defaults are usually generous.
-    // requestHandler: new NodeHttpHandler({ requestTimeout: 5000, connectionTimeout: 5000 }), // Example for more control
+    requestHandler: new NodeHttpHandler({
+      connectionTimeout: 10000, // 10 seconds
+      requestTimeout: 10000,    // 10 seconds
+    }),
   });
+  console.log("[FIRMWARE_S3_API] S3 client configured with custom timeouts (10s connection, 10s request).");
 
   try {
     console.log("[FIRMWARE_S3_API] Attempting to list objects with prefix 'firmware/'");
