@@ -1,12 +1,12 @@
 #ifndef OTA_H
 #define OTA_H
 
+#include "../../../include/secrets.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <esp_ota_ops.h>
 #include <functional>
 #include <mbedtls/sha256.h>
-
 // Callback function types
 using OTAProgressCallback = std::function<void(unsigned int, unsigned int)>;
 using OTAErrorCallback = std::function<void(int, const char *)>;
@@ -71,7 +71,7 @@ public:
   bool isRollbackProtectionEnabled() const { return _rollbackEnabled; }
 
   // Static MQTT command handler
-  static void otaCommand(const char *payload);
+  static void otaCommand(const char *topic, const char *payload);
 
 private:
   void _updateTask(void *pvParameters);

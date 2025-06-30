@@ -436,10 +436,16 @@ void OTA::_hexStringToBytes(const String &hexString, uint8_t *bytes,
   }
 }
 
-void OTA::otaCommand(const char *payload) {
+void OTA::otaCommand(const char *topic, const char *payload) {
   if (_instance == nullptr) {
     Serial.println(
         "[OTA] Error: No OTA instance available for command handling");
+    return;
+  }
+  // Check if the topic matches the expected command topic
+  String expectedTopic = String(MQTT_TOPIC_COMMAND "/" PLATFORMIO_BOARD_NAME);
+  if (strcmp(topic, expectedTopic.c_str()) != 0) {
+    Serial.println("[OTA] Ignoring command - topic does not match");
     return;
   }
   Serial.printf("[OTA] Received MQTT command: %s\n", payload);
