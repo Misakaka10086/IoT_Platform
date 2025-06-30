@@ -6,10 +6,12 @@ import {
   Devices as DevicesIcon,
   Memory as ProfilesIcon,
   History as HistoryIcon,
+  CloudUpload as CloudUploadIcon, // Added for the new tab
 } from "@mui/icons-material";
 import DevicesTab from "./components/DevicesTab";
 import ProfilesTab from "./components/ProfilesTab";
 import FirmwareVersionsTab from "./components/FirmwareVersionsTab";
+import FirmwareUpdateTab from "./components/FirmwareUpdateTab"; // Import the new tab component
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -76,6 +78,12 @@ export default function ManagementPage() {
           iconPosition="start"
           {...a11yProps(2)}
         />
+        <Tab
+          label="Firmware Update"
+          icon={<CloudUploadIcon />}
+          iconPosition="start"
+          {...a11yProps(3)} // New tab index
+        />
       </Tabs>
 
       <TabPanel value={tabValue} index={0}>
@@ -88,6 +96,10 @@ export default function ManagementPage() {
 
       <TabPanel value={tabValue} index={2}>
         <FirmwareVersionsTab />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={3}> {/* New TabPanel for Firmware Update */}
+        <FirmwareUpdateTab />
       </TabPanel>
     </Box>
   );
