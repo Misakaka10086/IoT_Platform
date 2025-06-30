@@ -35,18 +35,7 @@ import {
 import ConfigurationDialog from "./ConfigurationDialog";
 import DeviceCardMobile from "./DeviceCardMobile";
 import PinwheelLoader from "../../components/PinwheelLoader"; // Import PinwheelLoader
-
-interface Device {
-  id: number;
-  device_id: string;
-  chip: string;
-  board: string;
-  git_version: string;
-  registered_at: string;
-  last_seen: string | null;
-  online: boolean;
-  description: string | null;
-}
+import { Device } from "../../../types/device";
 
 export default function DevicesTab() {
   const [devices, setDevices] = useState<Device[]>([]);

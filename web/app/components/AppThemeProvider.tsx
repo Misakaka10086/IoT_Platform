@@ -2,13 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-
-type ThemeMode = "light" | "dark";
-
-interface ThemeContextType {
-  themeMode: ThemeMode;
-  toggleTheme: () => void;
-}
+import { ThemeMode, ThemeContextType, AppThemeProviderProps } from "../../types/theme";
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
@@ -19,10 +13,6 @@ export const useTheme = () => {
   }
   return context;
 };
-
-interface AppThemeProviderProps {
-  children: React.ReactNode;
-}
 
 export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({
   children,

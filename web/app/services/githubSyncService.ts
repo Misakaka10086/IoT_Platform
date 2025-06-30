@@ -10,15 +10,7 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const REPO_OWNER = process.env.REPO_OWNER;
 const REPO_NAME = process.env.REPO_NAME;
 
-interface GitHubCommit {
-    sha: string;
-    commit: {
-        message: string;
-        author: {
-            date: string;
-        };
-    };
-}
+import { GitHubCommit } from '../../types/github';
 
 /**
  * Fetches data from the GitHub API with authentication and error handling.

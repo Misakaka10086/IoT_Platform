@@ -5,17 +5,9 @@ import { DeviceStatus } from '../../types/device';
 import { pusherClientService } from '../services/pusherClientService';
 import { DeviceStatusUpdate, DeviceConnectionEvent } from '../../types/pusher-types';
 import { usePusher } from '../context/PusherProvider';
+import { UseDeviceStatusReturn } from '../../types/hooks'; // Corrected import
 
-interface UseDeviceStatusReturn {
-    devices: DeviceStatus[];
-    loading: boolean;
-    error: string | null;
-    pusherConnected: boolean;
-    refreshDevices: () => Promise<void>;
-    updateDeviceStatus: (deviceId: string, status: 'online' | 'offline') => Promise<void>;
-}
-
-export function useDeviceStatus(): UseDeviceStatusReturn {
+export function useDeviceStatus(): UseDeviceStatusReturn { // Corrected return type
     const { isPusherInitialized, isPusherConnected } = usePusher();
     const [devices, setDevices] = useState<DeviceStatus[]>([]);
     const [loading, setLoading] = useState(true);

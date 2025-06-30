@@ -19,6 +19,9 @@ import {
 } from "@mui/material";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import dynamic from "next/dynamic"; // 引入 dynamic
+import { Device, DeviceConfig, ConfigVersion } from "../../../types/device"; // Changed ConfigVersionView to ConfigVersion
+import { ConfigurationDialogProps } from "../../../types/components";
+
 
 // 动态导入 Monaco Editor 以获得更好的体验
 const MonacoEditor = dynamic(
@@ -42,41 +45,6 @@ const MonacoEditor = dynamic(
   }
 );
 
-// ... (接口定义保持不变) ...
-interface Device {
-  id: number;
-  device_id: string;
-  chip: string;
-  git_version: string;
-  registered_at: string;
-  last_seen: string | null;
-  online: boolean;
-  description: string | null;
-}
-
-interface DeviceConfig {
-  version: string;
-  git_version: string;
-  config: Record<string, any>;
-}
-
-interface ConfigVersion {
-  version: string;
-  git_version: string;
-  config: Record<string, any>;
-  created_at: string;
-  is_current: boolean;
-}
-
-interface ConfigurationDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onSave: () => void;
-  device: Device | null;
-  onError: (error: string) => void;
-  onSuccess: (message: string) => void;
-}
-
 export default function ConfigurationDialog({
   open,
   onClose,
@@ -87,7 +55,7 @@ export default function ConfigurationDialog({
 }: ConfigurationDialogProps) {
   const theme = useTheme();
   const [deviceConfig, setDeviceConfig] = useState<DeviceConfig | null>(null);
-  const [configVersions, setConfigVersions] = useState<ConfigVersion[]>([]);
+  const [configVersions, setConfigVersions] = useState<ConfigVersion[]>([]); // Changed ConfigVersionView to ConfigVersion
   const [selectedVersion, setSelectedVersion] = useState<string>("");
   const [configFormData, setConfigFormData] = useState({
     config: "{}",
@@ -132,7 +100,7 @@ export default function ConfigurationDialog({
       );
 
       setDeviceConfig(configData.config);
-      setConfigVersions(versionsData.versions);
+      setConfigVersions(versionsData.versions as ConfigVersion[]); // Cast to ConfigVersion[]
       setSelectedVersion(configData.config.version);
       setConfigFormData({ config: initialConfigStr });
       // 新增: 初始化原始配置

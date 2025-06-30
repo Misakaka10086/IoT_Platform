@@ -5,13 +5,9 @@ import { OTAStatus, OTAStateMap } from '../../types/ota-types';
 import { pusherClientService } from '../services/pusherClientService';
 import { DeviceOTAProgressUpdate, DeviceOTAEvent } from '../../types/pusher-types';
 import { usePusher } from '../context/PusherProvider';
+import { UseDeviceOTAStatusReturn } from '../../types/hooks'; // Corrected import
 
-interface useDeviceOTAStatusReturn {
-    otaStatuses: OTAStateMap;
-    error: string | null;
-}
-
-export function useDeviceOTAStatus(): useDeviceOTAStatusReturn {
+export function useDeviceOTAStatus(): UseDeviceOTAStatusReturn { // Corrected return type
     const { isPusherInitialized } = usePusher();
     const [otaStatuses, setOtaStatuses] = useState<OTAStateMap>({});
     const [error, setError] = useState<string | null>(null);

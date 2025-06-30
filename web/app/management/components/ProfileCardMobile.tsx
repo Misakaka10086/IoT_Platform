@@ -19,19 +19,8 @@ import {
   DataObject as ConfigIcon,
   Schedule as TimeIcon,
 } from "@mui/icons-material";
-
-interface DeviceProfile {
-  id: number;
-  model: string;
-  default_config: Record<string, any>;
-  created_at: string;
-}
-
-interface ProfileCardMobileProps {
-  profile: DeviceProfile;
-  onEdit: (profile: DeviceProfile) => void;
-  onDelete: (profile: DeviceProfile) => void;
-}
+import { DeviceProfile } from "../../../types/device";
+import { ProfileCardMobileProps } from "../../../types/components";
 
 const formatDate = (dateString: string | null) => {
   if (!dateString) return "N/A";

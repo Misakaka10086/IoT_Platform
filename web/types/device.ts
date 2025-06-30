@@ -2,15 +2,19 @@ export interface Device {
     id: number;
     device_id: string;
     chip: string;
+    board: string; // Added missing property
     git_version: string;
     registered_at: string;
     last_seen: string | null;
     description: string | null;
+    online: boolean; // Added from DeviceInfo
 }
 
-export interface DeviceInfo extends Device {
-    online: boolean;
-}
+// DeviceInfo is now merged into Device
+// export interface DeviceInfo extends Device {
+// online: boolean;
+// }
+
 export interface GitVersion {
     id: number;
     device_id: string;
@@ -31,6 +35,7 @@ export interface ConfigVersion {
     git_version: string;
     config: Record<string, any>;
     created_at: string;
+    is_current?: boolean; // Added optional field
 }
 
 export interface DeviceConfig {
@@ -63,3 +68,8 @@ export interface DeviceStatus {
 export interface SetVersionRequest {
     version: string;
 }
+
+// ConfigVersionView has been merged into ConfigVersion
+// export interface ConfigVersionView extends ConfigVersion {
+//     is_current: boolean;
+// }

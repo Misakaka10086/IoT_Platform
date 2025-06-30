@@ -10,12 +10,7 @@ import {
 import DevicesTab from "./components/DevicesTab";
 import ProfilesTab from "./components/ProfilesTab";
 import FirmwareVersionsTab from "./components/FirmwareVersionsTab";
-
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
+import { TabPanelProps } from "../../types/components";
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;

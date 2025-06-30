@@ -27,14 +27,7 @@ import DeveloperBoardIcon from "@mui/icons-material/DeveloperBoard";
 import { keyframes } from "@emotion/react";
 import { DeviceStatus } from "../../types/device";
 import { OTAStatus } from "../../types/ota-types";
-interface DeviceCardProps {
-  device: DeviceStatus;
-  otaStatus?: OTAStatus;
-  onStatusUpdate?: (
-    deviceId: string,
-    status: "online" | "offline"
-  ) => Promise<void>;
-}
+import { DeviceCardProps } from "../../types/components";
 
 const pulse = keyframes`
   0% {

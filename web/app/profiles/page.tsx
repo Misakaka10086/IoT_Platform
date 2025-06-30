@@ -31,13 +31,7 @@ import {
   Delete as DeleteIcon,
   Memory as ChipIcon,
 } from "@mui/icons-material";
-
-interface DeviceProfile {
-  id: number;
-  model: string;
-  default_config: Record<string, any>;
-  created_at: string;
-}
+import { DeviceProfile } from "../../types/device";
 
 export default function ProfilesPage() {
   const [profiles, setProfiles] = useState<DeviceProfile[]>([]);

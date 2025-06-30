@@ -23,11 +23,11 @@ import {
   LocalOffer,
 } from "@mui/icons-material";
 import PinwheelLoader from "../../components/PinwheelLoader";
-import { DeviceInfo, GitVersion } from "../../../types/device";
+import { Device, GitVersion } from "../../../types/device"; // Changed DeviceInfo to Device
 import { GitCommitInfo } from "../../../types/ota-types";
 
 export default function FirmwareVersionsTab() {
-  const [devices, setDevices] = useState<DeviceInfo[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]); // Changed DeviceInfo to Device
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const [firmwareVersions, setFirmwareVersions] = useState<GitVersion[]>([]);
   const [selectedFirmwareVersion, setSelectedFirmwareVersion] =

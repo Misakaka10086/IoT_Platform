@@ -32,13 +32,7 @@ import {
 import ProfileDialog from "./ProfileDialog";
 import ProfileCardMobile from "./ProfileCardMobile";
 import PinwheelLoader from "../../components/PinwheelLoader"; // Import PinwheelLoader
-
-interface DeviceProfile {
-  id: number;
-  model: string;
-  default_config: Record<string, any>;
-  created_at: string;
-}
+import { DeviceProfile } from "../../../types/device";
 
 export default function ProfilesTab() {
   const [profiles, setProfiles] = useState<DeviceProfile[]>([]);

@@ -14,6 +14,7 @@ import {
   useTheme,
 } from "@mui/material";
 import dynamic from "next/dynamic";
+import { ProfileDialogProps } from "../../../types/components";
 
 const MonacoEditor = dynamic(
   () => import("@monaco-editor/react").then((mod) => mod.Editor),
@@ -35,18 +36,6 @@ const MonacoEditor = dynamic(
     ),
   }
 );
-
-interface ProfileDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onSave: () => void;
-  formData: { model: string; default_config: string };
-  setFormData: React.Dispatch<
-    React.SetStateAction<{ model: string; default_config: string }>
-  >;
-  isEditMode: boolean;
-  profileModel?: string;
-}
 
 export default function ProfileDialog({
   open,

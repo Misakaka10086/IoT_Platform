@@ -23,25 +23,8 @@ import {
   SignalWifiOff as OfflineIcon,
   DeveloperBoard as DeveloperBoardIcon,
 } from "@mui/icons-material";
-
-interface Device {
-  id: number;
-  device_id: string;
-  chip: string;
-  board: string;
-  git_version: string;
-  registered_at: string;
-  last_seen: string | null;
-  online: boolean;
-  description: string | null;
-}
-
-interface DeviceCardMobileProps {
-  device: Device;
-  onEditConfig: (device: Device) => void;
-  onEditDescription: (device: Device) => void;
-  onDelete: (device: Device) => void;
-}
+import { Device } from "../../../types/device";
+import { DeviceCardMobileProps } from "../../../types/components";
 
 const formatDate = (dateString: string | null) => {
   if (!dateString) return "Never";
