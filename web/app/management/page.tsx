@@ -6,10 +6,12 @@ import {
   Devices as DevicesIcon,
   Memory as ProfilesIcon,
   History as HistoryIcon,
+  SystemUpdateAlt as FirmwareUpdateIcon, // 新增图标
 } from "@mui/icons-material";
 import DevicesTab from "./components/DevicesTab";
 import ProfilesTab from "./components/ProfilesTab";
 import FirmwareVersionsTab from "./components/FirmwareVersionsTab";
+import FirmwareUpdateTab from "./components/FirmwareUpdateTab"; // 新增导入
 import { TabPanelProps } from "../../types/components";
 
 function TabPanel(props: TabPanelProps) {
@@ -71,6 +73,13 @@ export default function ManagementPage() {
           iconPosition="start"
           {...a11yProps(2)}
         />
+        {/* 新增的标签页 */}
+        <Tab
+          label="Firmware Update"
+          icon={<FirmwareUpdateIcon />}
+          iconPosition="start"
+          {...a11yProps(3)}
+        />
       </Tabs>
 
       <TabPanel value={tabValue} index={0}>
@@ -83,6 +92,11 @@ export default function ManagementPage() {
 
       <TabPanel value={tabValue} index={2}>
         <FirmwareVersionsTab />
+      </TabPanel>
+
+      {/* 新增的标签面板 */}
+      <TabPanel value={tabValue} index={3}>
+        <FirmwareUpdateTab />
       </TabPanel>
     </Box>
   );
