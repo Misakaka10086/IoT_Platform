@@ -12,22 +12,36 @@ import {
   Checkbox,
   Button,
   Divider,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Collapse,
 } from "@mui/material";
 import {
   Refresh as RefreshIcon,
   GitHub as GitHubIcon,
   DeveloperBoard as BoardIcon,
   SystemUpdateAlt as UpdateIcon,
+  CheckCircle as SuccessIcon,
+  Error as ErrorIcon,
 } from "@mui/icons-material";
 import PinwheelLoader from "../../components/PinwheelLoader";
-import { FirmwareApiResponse } from "../../../types/firmware";
+import {
+  FirmwareApiResponse,
+  FirmwareUpdateResponse,
+} from "../../../types/firmware";
 
 export default function FirmwareUpdateTab() {
   const [firmwareData, setFirmwareData] = useState<FirmwareApiResponse | null>(
     null
   );
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updateResponse, setUpdateResponse] =
+    useState<FirmwareUpdateResponse | null>(null);
   const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
   const [selectedBoards, setSelectedBoards] = useState<Record<string, boolean>>(
     {}
@@ -42,6 +56,7 @@ export default function FirmwareUpdateTab() {
     setError(null);
     setSelectedCommit(null);
     setSelectedBoards({});
+    setUpdateResponse(null);
     try {
       const response = await fetch("/api/firmware");
       if (!response.ok) {
@@ -58,8 +73,14 @@ export default function FirmwareUpdateTab() {
   };
 
   const handleCommitSelect = (commit: string) => {
-    setSelectedCommit(commit);
-    setSelectedBoards({}); // 重置所选的board
+    if (commit === selectedCommit) {
+      setSelectedCommit(null); //再次点击取消选择
+      setSelectedBoards({});
+    } else {
+      setSelectedCommit(commit);
+      setSelectedBoards({}); // 重置所选的board
+    }
+    setUpdateResponse(null); // 清除上次的更新结果
   };
 
   const handleBoardSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,6 +89,44 @@ export default function FirmwareUpdateTab() {
       [event.target.name]: event.target.checked,
     });
   };
+
+  const handleUpdate = async () => {
+    const boardsToUpdate = Object.keys(selectedBoards).filter(
+      (b) => selectedBoards[b]
+    );
+    if (!selectedCommit || boardsToUpdate.length === 0) {
+      setError("Please select a firmware version and at least one board.");
+      return;
+    }
+
+    setUpdating(true);
+    setError(null);
+    setUpdateResponse(null);
+
+    try {
+      const response = await fetch("/api/firmware/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          commitSha: selectedCommit,
+          boards: boardsToUpdate,
+        }),
+      });
+
+      const result: FirmwareUpdateResponse = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to initiate update.");
+      }
+      setUpdateResponse(result);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const getSelectedBoardsCount = () =>
+    Object.values(selectedBoards).filter(Boolean).length;
 
   const renderContent = () => {
     if (loading) {
@@ -88,7 +147,8 @@ export default function FirmwareUpdateTab() {
       );
     }
 
-    if (error) {
+    if (error && !firmwareData) {
+      // 只在没有数据时全屏显示错误
       return <Alert severity="error">{error}</Alert>;
     }
 
@@ -102,7 +162,7 @@ export default function FirmwareUpdateTab() {
 
     return (
       <Box>
-        <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
+        <Paper elevation={1} sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
             1. Select Firmware Version (Git Commit)
           </Typography>
@@ -124,49 +184,95 @@ export default function FirmwareUpdateTab() {
           </Box>
         </Paper>
 
-        {selectedCommit && firmwareData[selectedCommit] && (
-          <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              2. Select Target Boards
-            </Typography>
-            <FormGroup>
-              {firmwareData[selectedCommit].boards.map((board) => (
-                <FormControlLabel
-                  key={board}
-                  control={
-                    <Checkbox
-                      checked={!!selectedBoards[board]}
-                      onChange={handleBoardSelect}
-                      name={board}
-                    />
-                  }
-                  label={
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <BoardIcon fontSize="small" />
-                      <Typography>{board}</Typography>
-                    </Box>
-                  }
-                />
-              ))}
-            </FormGroup>
-          </Paper>
-        )}
+        <Collapse in={!!selectedCommit}>
+          {selectedCommit && firmwareData[selectedCommit] && (
+            <Paper elevation={1} sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                2. Select Target Boards
+              </Typography>
+              <FormGroup>
+                {firmwareData[selectedCommit].boards.map((board) => (
+                  <FormControlLabel
+                    key={board}
+                    control={
+                      <Checkbox
+                        checked={!!selectedBoards[board]}
+                        onChange={handleBoardSelect}
+                        name={board}
+                      />
+                    }
+                    label={
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <BoardIcon fontSize="small" />
+                        <Typography>{board}</Typography>
+                      </Box>
+                    }
+                  />
+                ))}
+              </FormGroup>
+            </Paper>
+          )}
+        </Collapse>
 
         <Divider sx={{ my: 3 }} />
 
-        <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          {updating && <CircularProgress size={24} />}
           <Button
             variant="contained"
             color="primary"
             startIcon={<UpdateIcon />}
-            disabled // 在第二部分实现功能前禁用此按钮
+            disabled={
+              !selectedCommit || getSelectedBoardsCount() === 0 || updating
+            }
+            onClick={handleUpdate}
           >
-            Initiate Update
+            Initiate Update ({getSelectedBoardsCount()})
           </Button>
         </Box>
-        <Alert severity="warning" sx={{ mt: 2 }}>
-          Update functionality will be implemented in the next step.
-        </Alert>
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
+        {updateResponse && (
+          <Paper elevation={2} sx={{ p: { xs: 2, md: 3 }, mt: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Update Results
+            </Typography>
+            <List dense>
+              {updateResponse.results.map((res, index) => (
+                <ListItem key={index}>
+                  <ListItemIcon>
+                    {res.success ? (
+                      <SuccessIcon color="success" />
+                    ) : (
+                      <ErrorIcon color="error" />
+                    )}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={res.board}
+                    secondary={
+                      res.success
+                        ? `Command sent to topic: ${res.topic}`
+                        : `Error: ${res.error}`
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        )}
       </Box>
     );
   };
@@ -186,8 +292,9 @@ export default function FirmwareUpdateTab() {
           variant="outlined"
           startIcon={<RefreshIcon />}
           onClick={loadFirmware}
+          disabled={loading}
         >
-          Refresh List
+          {loading ? "Refreshing..." : "Refresh List"}
         </Button>
       </Box>
       {renderContent()}

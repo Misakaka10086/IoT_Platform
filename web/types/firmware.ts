@@ -16,3 +16,20 @@ export type FirmwareApiResponse = Record<string, {
     boards: string[];
     firmwareInfo: FirmwareInfo[];
 }>;
+
+export interface FirmwareUpdateRequest {
+    commitSha: string;
+    boards: string[];
+}
+
+export interface FirmwareUpdateResult {
+    board: string;
+    success: boolean;
+    topic?: string;
+    error?: string;
+}
+
+export interface FirmwareUpdateResponse {
+    message: string;
+    results: FirmwareUpdateResult[];
+}
