@@ -83,34 +83,34 @@ jobs:
       # Configure AWS CLI for Backblaze B2
       - name: Configure AWS CLI
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.OSS_SECRET_ACCESS_KEY }}
         run: |
           aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
           aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
           aws configure set default.s3.signature_version s3v4
           aws configure set default.output json
 
-      # Upload firmware to Backblaze B2
-      - name: Upload Firmware to B2
-        env:
-          B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
-          B2_ENDPOINT_URL: ${{ secrets.B2_ENDPOINT_URL }}
-        run: |
-          cd ESP32
-          FIRMWARE_FILE=".pio/build/${{ matrix.board }}/firmware.bin"
-          UPLOAD_PATH="s3://$B2_BUCKET_NAME/firmware/${{ matrix.board }}/firmware.bin"
-          aws s3 cp "$FIRMWARE_FILE" "$UPLOAD_PATH" --endpoint-url "$B2_ENDPOINT_URL"
+      # # Upload firmware to Backblaze B2
+      # - name: Upload Firmware to B2
+      #   env:
+      #     B2_BUCKET_NAME: ${{ secrets.OSS_BUCKET_NAME }}
+      #     B2_ENDPOINT_URL: ${{ secrets.OSS_ENDPOINT_URL }}
+      #   run: |
+      #     cd ESP32
+      #     FIRMWARE_FILE=".pio/build/${{ matrix.board }}/firmware.bin"
+      #     UPLOAD_PATH="s3://$B2_BUCKET_NAME/firmware/${{ matrix.board }}/firmware.bin"
+      #     aws s3 cp "$FIRMWARE_FILE" "$UPLOAD_PATH" --endpoint-url "$B2_ENDPOINT_URL"
 
       # Calculate SHA256 and Git commit SHA, and upload firmware with metadata to Backblaze B2
       - name: Upload Firmware with SHA256 and Git Commit Metadata to B2
         env:
-          B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
-          B2_ENDPOINT_URL: ${{ secrets.B2_ENDPOINT_URL }}
+          B2_BUCKET_NAME: ${{ secrets.OSS_BUCKET_NAME }}
+          B2_ENDPOINT_URL: ${{ secrets.OSS_ENDPOINT_URL }}
         run: |
           cd ESP32
           FIRMWARE_FILE=".pio/build/${{ matrix.board }}/firmware.bin"
-          UPLOAD_PATH="s3://$B2_BUCKET_NAME/firmware/${{ matrix.board }}/firmware.bin"
           SHA256=$(sha256sum "$FIRMWARE_FILE" | cut -d ' ' -f 1)
           GIT_COMMIT_SHA=$(git rev-parse HEAD)
+          UPLOAD_PATH="s3://$B2_BUCKET_NAME/firmware/${{ matrix.board }}/${GIT_COMMIT_SHA}_firmware.bin"
           aws s3 cp "$FIRMWARE_FILE" "$UPLOAD_PATH" --endpoint-url "$B2_ENDPOINT_URL" --metadata "sha256=$SHA256,git-commit-sha=$GIT_COMMIT_SHA"
