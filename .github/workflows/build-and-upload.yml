@@ -112,5 +112,5 @@ jobs:
           FIRMWARE_FILE=".pio/build/${{ matrix.board }}/firmware.bin"
           SHA256=$(sha256sum "$FIRMWARE_FILE" | cut -d ' ' -f 1)
           GIT_COMMIT_SHA=$(git rev-parse HEAD)
-          UPLOAD_PATH="s3://$B2_BUCKET_NAME/firmware/${{ matrix.board }}/${GIT_COMMIT_SHA}_${SHA256}_firmware.bin"
+          UPLOAD_PATH="s3://$B2_BUCKET_NAME/firmware/${{ matrix.board }}/${GIT_COMMIT_SHA}_firmware.bin"
           aws s3 cp "$FIRMWARE_FILE" "$UPLOAD_PATH" --endpoint-url "$B2_ENDPOINT_URL" --metadata "sha256=$SHA256,git-commit-sha=$GIT_COMMIT_SHA"
